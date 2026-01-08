@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    ports:
+      - "${DB_HOST_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  migrations:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.migrations
+    env_file:
+      - .env
+    # NOTE: environment overrides env_file with proper DB_PORT and DB_HOST
+    # regardless of launch env (i.e. local, dev or prod and etc.)
+    environment:
+      DB_PORT: 5432
+      DB_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["poetry", "run", "alembic", "upgrade", "head"]
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    # NOTE: environment overrides env_file with proper DB_PORT and DB_HOST
+    # regardless of launch env (i.e. local, dev or prod and etc.)
+    environment:
+      DB_PORT: 5432
+      DB_HOST: postgres
+
+volumes:
+  postgres_data:

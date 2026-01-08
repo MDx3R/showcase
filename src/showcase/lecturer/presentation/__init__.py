@@ -1,0 +1,1 @@
+"""Lecturer presentation module."""

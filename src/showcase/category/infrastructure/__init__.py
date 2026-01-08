@@ -1,0 +1,1 @@
+"""Category infrastructure module."""

@@ -1,0 +1,19 @@
+env: local
+
+logger:
+  level: "DEBUG"
+  format: "json"
+
+db:
+  db_name: "mydb"
+  db_user: "postgres"
+  db_pass: "password"
+  db_host: "localhost"
+  db_port: 5433
+  db_driver: "postgresql"
+  db_extension: "asyncpg"
+
+llm:
+  base_url: "https://api.vsegpt.ru/v1"
+  model: "gpt-5-nano"
+  provider_model: "openai/gpt-5-nano"

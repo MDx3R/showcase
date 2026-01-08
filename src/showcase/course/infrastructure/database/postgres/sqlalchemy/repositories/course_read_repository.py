@@ -1,0 +1,162 @@
+"""Course read repository implementation."""
+
+from uuid import UUID
+
+from common.infrastructure.database.postgres.sqlalchemy.executor import (
+    QueryExecutor,
+)
+from showcase.category.infrastructure.database.postgres.sqlalchemy.models.category import (
+    CategoryBase,
+)
+from showcase.course.application.interfaces.repositories import ICourseReadRepository
+from showcase.course.application.interfaces.repositories.course_read_repository import (
+    CourseFilter,
+)
+from showcase.course.application.read_models.course_read_model import CourseReadModel
+from showcase.course.domain.value_objects import CourseStatus
+from showcase.course.infrastructure.database.postgres.sqlalchemy.mappers import (
+    CourseReadMapper,
+)
+from showcase.course.infrastructure.database.postgres.sqlalchemy.models import (
+    CourseBase,
+)
+from sqlalchemy import func, select
+from sqlalchemy.orm import joinedload
+
+
+class CourseReadRepository(ICourseReadRepository):
+    """Read repository for courses."""
+
+    def __init__(self, executor: QueryExecutor) -> None:
+        self.executor = executor
+
+    async def get_by_id(self, course_id: UUID) -> CourseReadModel:
+        """Get a course by ID."""
+        stmt = (
+            select(CourseBase)
+            .where(CourseBase.course_id == course_id)
+            .options(
+                joinedload(CourseBase.sections),
+                joinedload(CourseBase.categories),
+                joinedload(CourseBase.tags),
+                joinedload(CourseBase.acquired_skills),
+                joinedload(CourseBase.lecturers),
+            )
+        )
+        model = await self.executor.execute_scalar_one(stmt)
+        if not model:
+            raise ValueError(f"Course with id {course_id} not found")
+        return CourseReadMapper.to_read_model(model)
+
+    async def get_all(
+        self,
+        status: CourseStatus | None = None,
+        is_published: bool | None = None,
+        category_id: UUID | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[CourseReadModel]:
+        """Get all courses with optional filters."""
+        stmt = select(CourseBase)
+
+        if status is not None:
+            stmt = stmt.where(CourseBase.status == status)
+
+        if is_published is not None:
+            stmt = stmt.where(CourseBase.is_published == is_published)
+
+        if category_id is not None:
+            stmt = stmt.join(CourseBase.categories).where(
+                CategoryBase.category_id == category_id
+            )
+
+        stmt = (
+            stmt.options(
+                joinedload(CourseBase.sections),
+                joinedload(CourseBase.categories),
+                joinedload(CourseBase.tags),
+                joinedload(CourseBase.acquired_skills),
+                joinedload(CourseBase.lecturers),
+            )
+            .offset(skip)
+            .limit(limit)
+        )
+
+        models = await self.executor.execute_scalar_many(stmt)
+        return [CourseReadMapper.to_read_model(model) for model in models]
+
+    async def search(
+        self, query: str, skip: int = 0, limit: int = 50
+    ) -> list[CourseReadModel]:
+        """Full-text search for courses using PostgreSQL tsvector in SELECT."""
+        # Build tsvector from name and description (can be extended)
+        vector = func.to_tsvector(
+            "russian", func.concat_ws(" ", CourseBase.name, CourseBase.description)
+        )
+        ts_query = func.plainto_tsquery("russian", query)
+
+        rank = func.ts_rank(vector, ts_query)
+
+        stmt = (
+            select(CourseBase)
+            .where(vector.op("@@")(ts_query))
+            .order_by(rank.desc())
+            .options(
+                joinedload(CourseBase.sections),
+                joinedload(CourseBase.categories),
+                joinedload(CourseBase.tags),
+                joinedload(CourseBase.acquired_skills),
+                joinedload(CourseBase.lecturers),
+            )
+            .offset(skip)
+            .limit(limit)
+        )
+
+        models = await self.executor.execute_scalar_many(stmt)
+        return [CourseReadMapper.to_read_model(model) for model in models]
+
+    async def filter(self, filter: CourseFilter) -> list[CourseReadModel]:
+        """Deterministic filtering.
+
+        Returns top-N courses strictly matching filters.
+        """
+        stmt = select(CourseBase).distinct()
+
+        stmt = stmt.where(
+            CourseBase.status == filter.status,
+            CourseBase.is_published == filter.is_published,
+        )
+
+        if filter.format is not None:
+            stmt = stmt.where(CourseBase.format == filter.format)
+
+        if filter.max_duration_hours is not None:
+            stmt = stmt.where(CourseBase.duration_hours <= filter.max_duration_hours)
+
+        if filter.certificate_required is True:
+            stmt = stmt.where(CourseBase.certificate_type.isnot(None))
+
+        if filter.categories:
+            stmt = stmt.join(CourseBase.categories).where(
+                CategoryBase.name.in_(filter.categories)
+            )
+
+        stmt = stmt.order_by(
+            CourseBase.start_date.asc().nulls_last(),
+            CourseBase.duration_hours.asc(),
+        )
+
+        stmt = (
+            stmt.options(
+                joinedload(CourseBase.sections),
+                joinedload(CourseBase.categories),
+                joinedload(CourseBase.tags),
+                joinedload(CourseBase.acquired_skills),
+                joinedload(CourseBase.lecturers),
+            )
+            .offset(filter.skip)
+            .limit(filter.limit)
+        )
+
+        models = await self.executor.execute_scalar_many(stmt)
+        return [CourseReadMapper.to_read_model(model) for model in models]

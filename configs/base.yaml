@@ -1,0 +1,29 @@
+env: local
+server:
+  host: "127.0.0.1"
+  port: 8000
+
+auth:
+  secret_key: "super-secret"
+  algorithm: "HS256"
+  issuer: "my-service"
+  access_token_ttl: 1800
+  refresh_token_ttl: 604800
+
+logger:
+  level: "INFO"
+  format: "json"
+
+db:
+  db_name: "appdb"
+  db_user: "user"
+  db_pass: "password"
+  db_host: "localhost"
+  db_port: 5432
+  db_driver: "postgresql"
+  db_extension: "asyncpg"
+
+llm:
+  api_key: "secret-key"
+  base_url: "http://localhost:8080"
+  model: "gpt-5-nano"
