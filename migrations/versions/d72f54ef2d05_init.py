@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 0765612cc6b0
+Revision ID: d72f54ef2d05
 Revises: 
-Create Date: 2026-01-07 00:12:59.449110
+Create Date: 2026-01-08 21:17:03.859845
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0765612cc6b0'
+revision: str = 'd72f54ef2d05'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,10 +25,8 @@ def upgrade() -> None:
     sa.Column('category_id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('parent_id', sa.UUID(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['parent_id'], ['categories.category_id'], ),
     sa.PrimaryKeyConstraint('category_id'),
     sa.UniqueConstraint('name')
     )
@@ -39,16 +37,14 @@ def upgrade() -> None:
     sa.Column('format', sa.Enum('ONLINE', 'OFFLINE', 'MIXED', name='format'), nullable=False),
     sa.Column('duration_hours', sa.Integer(), nullable=False),
     sa.Column('cost', sa.Numeric(precision=10, scale=2), nullable=False),
+    sa.Column('discounted_cost', sa.Numeric(precision=10, scale=2), nullable=True),
     sa.Column('start_date', sa.DateTime(timezone=True), nullable=True),
     sa.Column('certificate_type', sa.Enum('CERTIFICATE', 'DIPLOMA', 'ATTESTATION', 'NONE', name='certificatetype'), nullable=False),
     sa.Column('status', sa.Enum('ACTIVE', 'ENROLLING', 'ARCHIVED', 'DRAFT', name='coursestatus'), nullable=False),
-    sa.Column('code', sa.String(length=50), nullable=True),
     sa.Column('is_published', sa.Boolean(), nullable=False),
-    sa.Column('target_audience', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.PrimaryKeyConstraint('course_id'),
-    sa.UniqueConstraint('code')
+    sa.PrimaryKeyConstraint('course_id')
     )
     op.create_table('identities',
     sa.Column('identity_id', sa.UUID(), nullable=False),
@@ -82,7 +78,6 @@ def upgrade() -> None:
     op.create_table('tags',
     sa.Column('tag_id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('tag_id'),
@@ -101,26 +96,22 @@ def upgrade() -> None:
     sa.UniqueConstraint('value')
     )
     op.create_table('course_categories',
-    sa.Column('association_id', sa.UUID(), nullable=False),
     sa.Column('course_id', sa.UUID(), nullable=False),
     sa.Column('category_id', sa.UUID(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['category_id'], ['categories.category_id'], ),
-    sa.ForeignKeyConstraint(['course_id'], ['courses.course_id'], ),
-    sa.PrimaryKeyConstraint('association_id'),
-    sa.UniqueConstraint('course_id', 'category_id', name='uq_course_category')
+    sa.ForeignKeyConstraint(['course_id'], ['courses.course_id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('course_id', 'category_id')
     )
     op.create_table('course_lecturers',
-    sa.Column('association_id', sa.UUID(), nullable=False),
     sa.Column('course_id', sa.UUID(), nullable=False),
     sa.Column('lecturer_id', sa.UUID(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['course_id'], ['courses.course_id'], ),
     sa.ForeignKeyConstraint(['lecturer_id'], ['lecturers.lecturer_id'], ),
-    sa.PrimaryKeyConstraint('association_id'),
-    sa.UniqueConstraint('course_id', 'lecturer_id', name='uq_course_lecturer')
+    sa.PrimaryKeyConstraint('course_id', 'lecturer_id')
     )
     op.create_table('course_sections',
     sa.Column('section_id', sa.UUID(), nullable=False),
@@ -131,30 +122,39 @@ def upgrade() -> None:
     sa.Column('hours', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['course_id'], ['courses.course_id'], ),
+    sa.ForeignKeyConstraint(['course_id'], ['courses.course_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('section_id')
     )
     op.create_table('course_skills',
-    sa.Column('association_id', sa.UUID(), nullable=False),
     sa.Column('course_id', sa.UUID(), nullable=False),
     sa.Column('skill_id', sa.UUID(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['course_id'], ['courses.course_id'], ),
+    sa.ForeignKeyConstraint(['course_id'], ['courses.course_id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['skill_id'], ['skills.skill_id'], ),
-    sa.PrimaryKeyConstraint('association_id'),
-    sa.UniqueConstraint('course_id', 'skill_id', name='uq_course_skill')
+    sa.PrimaryKeyConstraint('course_id', 'skill_id')
     )
     op.create_table('course_tags',
-    sa.Column('association_id', sa.UUID(), nullable=False),
     sa.Column('course_id', sa.UUID(), nullable=False),
     sa.Column('tag_id', sa.UUID(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['course_id'], ['courses.course_id'], ),
+    sa.ForeignKeyConstraint(['course_id'], ['courses.course_id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['tag_id'], ['tags.tag_id'], ),
-    sa.PrimaryKeyConstraint('association_id'),
-    sa.UniqueConstraint('course_id', 'tag_id', name='uq_course_tag')
+    sa.PrimaryKeyConstraint('course_id', 'tag_id')
+    )
+    op.create_table('enrollments',
+    sa.Column('enrollment_id', sa.UUID(), nullable=False),
+    sa.Column('course_id', sa.UUID(), nullable=False),
+    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('full_name', sa.String(length=255), nullable=False),
+    sa.Column('phone', sa.String(length=50), nullable=True),
+    sa.Column('message', sa.Text(), nullable=True),
+    sa.Column('user_id', sa.UUID(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['course_id'], ['courses.course_id'], ),
+    sa.PrimaryKeyConstraint('enrollment_id')
     )
     # ### end Alembic commands ###
 
@@ -162,6 +162,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table('enrollments')
     op.drop_table('course_tags')
     op.drop_table('course_skills')
     op.drop_table('course_sections')
