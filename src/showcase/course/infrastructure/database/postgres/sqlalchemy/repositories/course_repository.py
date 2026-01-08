@@ -2,6 +2,7 @@
 
 from uuid import UUID
 
+from common.domain.value_objects.datetime import DateTime
 from common.infrastructure.database.postgres.sqlalchemy.executor import QueryExecutor
 from showcase.course.application.interfaces.repositories.course_repository import (
     ICourseRepository,
@@ -15,7 +16,8 @@ from showcase.course.infrastructure.database.postgres.sqlalchemy.models.course i
     CourseSkillBase,
     CourseTagBase,
 )
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, literal_column, select, update
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import joinedload
 
 
@@ -48,6 +50,7 @@ class CourseRepository(ICourseRepository):
         model = self._to_persistence(course)
         await self.executor.add(model)
         await self._add(course)
+        await self._update_search_vector(course)
 
     async def delete(self, course_id: UUID) -> None:
         """Delete a course and its associations by ID."""
@@ -84,6 +87,7 @@ class CourseRepository(ICourseRepository):
         )
         await self.executor.save(model)
         await self._add(course)
+        await self._update_search_vector(course)
 
     async def _add(self, course: Course) -> None:
         """Add sections and associations for course."""
@@ -129,6 +133,54 @@ class CourseRepository(ICourseRepository):
             ]
         )
 
+    async def _update_search_vector(self, course: Course):
+        sections_text_subq = (
+            select(
+                func.coalesce(
+                    func.string_agg(
+                        func.concat_ws(
+                            " ", CourseSectionBase.name, CourseSectionBase.description
+                        ),
+                        " ",
+                    ),
+                    "",
+                )
+            )
+            .where(CourseSectionBase.course_id == course.course_id)
+            .scalar_subquery()
+        )
+
+        search_vector = (
+            func.setweight(
+                func.to_tsvector("russian", func.coalesce(CourseBase.name, "")).cast(
+                    TSVECTOR
+                ),
+                literal_column("'A'"),
+            )
+            .op("||")(
+                func.setweight(
+                    func.to_tsvector(
+                        "russian", func.coalesce(CourseBase.description, "")
+                    ).cast(TSVECTOR),
+                    literal_column("'B'"),
+                )
+            )
+            .op("||")(
+                func.setweight(
+                    func.to_tsvector("russian", sections_text_subq).cast(TSVECTOR),
+                    literal_column("'C'"),
+                )
+            )
+        )
+
+        stmt = (
+            update(CourseBase)
+            .where(CourseBase.course_id == course.course_id)
+            .values(search_vector=search_vector)
+        )
+
+        await self.executor.execute(stmt)
+
     @staticmethod
     def _to_domain(model: CourseBase) -> Course:
         """Map ORM model to domain entity."""
@@ -152,8 +204,8 @@ class CourseRepository(ICourseRepository):
             duration_hours=model.duration_hours,
             cost=model.cost,
             discounted_cost=model.discounted_cost,
-            start_date=model.start_date,
-            end_date=model.end_date,
+            start_date=DateTime.new(model.start_date),
+            end_date=DateTime.new(model.end_date),
             certificate_type=model.certificate_type,
             status=model.status,
             is_published=model.is_published,
@@ -177,8 +229,8 @@ class CourseRepository(ICourseRepository):
             duration_hours=entity.duration_hours,
             cost=entity.cost,
             discounted_cost=entity.discounted_cost,
-            start_date=entity.start_date,
-            end_date=entity.end_date,
+            start_date=entity.start_date.value if entity.start_date else None,
+            end_date=entity.end_date.value if entity.end_date else None,
             certificate_type=entity.certificate_type,
             status=entity.status,
             is_published=entity.is_published,

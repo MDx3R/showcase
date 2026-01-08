@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from common.domain.value_objects.datetime import DateTime
 from common.infrastructure.database.postgres.sqlalchemy.models import Base
 from showcase.category.infrastructure.database.postgres.sqlalchemy.models import (
     CategoryBase,
@@ -30,13 +30,14 @@ from sqlalchemy import (
     DateTime as SQLDateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
     Text,
     text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import ARRAY, TSVECTOR, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -44,6 +45,9 @@ class CourseBase(Base):
     """SQLAlchemy model for Course."""
 
     __tablename__ = "courses"
+    __table_args__ = (
+        Index("ix_courses_search_vector", "search_vector", postgresql_using="gin"),
+    )
 
     course_id: Mapped[UUID] = mapped_column(PGUUID, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -57,10 +61,10 @@ class CourseBase(Base):
     discounted_cost: Mapped[Decimal | None] = mapped_column(
         Numeric(10, 2), nullable=True
     )
-    start_date: Mapped[DateTime | None] = mapped_column(
+    start_date: Mapped[datetime | None] = mapped_column(
         SQLDateTime(timezone=True), nullable=True
     )
-    end_date: Mapped[DateTime | None] = mapped_column(
+    end_date: Mapped[datetime | None] = mapped_column(
         SQLDateTime(timezone=True), nullable=True
     )
     certificate_type: Mapped[CertificateType] = mapped_column(
@@ -72,6 +76,10 @@ class CourseBase(Base):
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
     locations: Mapped[list[str]] = mapped_column(
         ARRAY(String(255)), nullable=False, server_default=text("'{}'")
+    )
+
+    search_vector: Mapped[str] = mapped_column(
+        TSVECTOR, nullable=False, server_default=text("''::tsvector")
     )
 
     sections: Mapped[list[CourseSectionBase]] = relationship(

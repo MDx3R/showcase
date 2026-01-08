@@ -1,5 +1,6 @@
 """Course read repository implementation."""
 
+from typing import Any, cast
 from uuid import UUID
 
 from common.infrastructure.database.postgres.sqlalchemy.executor import (
@@ -23,7 +24,7 @@ from showcase.course.infrastructure.database.postgres.sqlalchemy.mappers import 
 from showcase.course.infrastructure.database.postgres.sqlalchemy.models import (
     CourseBase,
 )
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.orm import joinedload
 
 
@@ -92,10 +93,7 @@ class CourseReadRepository(ICourseReadRepository):
         self, query: str, skip: int = 0, limit: int = 50
     ) -> list[CourseReadModel]:
         """Full-text search for courses using PostgreSQL tsvector in SELECT."""
-        # Build tsvector from name and description (can be extended)
-        vector = func.to_tsvector(
-            "russian", func.concat_ws(" ", CourseBase.name, CourseBase.description)
-        )
+        vector = CourseBase.search_vector
         ts_query = func.plainto_tsquery("russian", query)
 
         rank = func.ts_rank(vector, ts_query)
@@ -172,11 +170,13 @@ class CourseReadRepository(ICourseReadRepository):
         stmt = stmt.where(CourseBase.is_published == filter.is_published)
 
         # Full-text search
+        rank = None
         if filter.search:
-            vector = func.to_tsvector(
-                "russian", func.concat_ws(" ", CourseBase.name, CourseBase.description)
-            )
+            vector = CourseBase.search_vector
             ts_query = func.plainto_tsquery("russian", filter.search)
+
+            rank = func.ts_rank(vector, ts_query)
+
             stmt = stmt.where(vector.op("@@")(ts_query))
 
         # Formats and education types
@@ -218,26 +218,30 @@ class CourseReadRepository(ICourseReadRepository):
             stmt = stmt.where(CourseBase.start_date > func.now())
 
         # Sorting
-        # Map sort field to column
-        sort_col = None
-        if filter.sort_field == CourseSortField.TITLE:
-            sort_col = CourseBase.name
-        elif filter.sort_field == CourseSortField.PRICE:
-            sort_col = CourseBase.cost
-        elif filter.sort_field == CourseSortField.DURATION:
-            sort_col = CourseBase.duration_hours
-        else:
-            sort_col = CourseBase.start_date
+        order_by_cols: list[ColumnElement[Any]] = []
+
+        if rank is not None:
+            order_by_cols.append(rank.desc())
+
+        sort_col = cast(
+            dict[CourseSortField, ColumnElement[Any]],
+            {
+                CourseSortField.TITLE: CourseBase.name,
+                CourseSortField.PRICE: CourseBase.cost,
+                CourseSortField.DURATION: CourseBase.duration_hours,
+            },
+        ).get(filter.sort_field, CourseBase.start_date)
 
         if filter.sort_order == CourseSortOrder.DESC:
-            stmt = stmt.order_by(sort_col.desc())
+            order_by_cols.append(sort_col.desc())
         else:
-            stmt = stmt.order_by(sort_col.asc())
+            order_by_cols.append(sort_col.asc())
 
         # Default ordering to keep stable results
-        stmt = stmt.order_by(
-            CourseBase.start_date.asc().nulls_last(), CourseBase.duration_hours.asc()
-        )
+        order_by_cols.append(CourseBase.start_date.asc().nulls_last())
+        order_by_cols.append(CourseBase.duration_hours.asc())
+
+        stmt = stmt.order_by(*order_by_cols)
 
         stmt = (
             stmt.options(

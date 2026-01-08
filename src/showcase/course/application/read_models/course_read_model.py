@@ -5,7 +5,6 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from common.domain.value_objects.datetime import DateTime
 from pydantic import BaseModel
 from showcase.category.application.read_models.category_read_model import (
     CategoryReadModel,
@@ -44,8 +43,8 @@ class CourseReadModel(BaseModel):
     duration_hours: int
     cost: Decimal
     discounted_cost: Decimal | None
-    start_date: DateTime | None
-    end_date: DateTime | None
+    start_date: datetime | None
+    end_date: datetime | None
     certificate_type: CertificateType
     status: CourseStatus
     is_published: bool

@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from common.domain.interfaces.uuid_generator import IUUIDGenerator
+from common.domain.value_objects.datetime import DateTime
 from showcase.course.application.dtos.commands.update_course_command import (
     UpdateCourseCommand,
 )
@@ -66,8 +67,8 @@ class UpdateCourseUseCase(IUpdateCourseUseCase):
             duration_hours=command.duration_hours,
             cost=command.cost,
             discounted_cost=command.discounted_cost,
-            start_date=command.start_date,
-            end_date=command.end_date,
+            start_date=DateTime.new(command.start_date),
+            end_date=DateTime.new(command.end_date),
             certificate_type=command.certificate_type,
             status=command.status,
             is_published=command.is_published,

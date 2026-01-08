@@ -1,18 +1,18 @@
 """init
 
-Revision ID: d72f54ef2d05
+Revision ID: 9be923b42de7
 Revises: 
-Create Date: 2026-01-08 21:17:03.859845
+Create Date: 2026-01-09 01:38:31.225429
 
 """
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'd72f54ef2d05'
+revision: str = '9be923b42de7'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -35,17 +35,22 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('format', sa.Enum('ONLINE', 'OFFLINE', 'MIXED', name='format'), nullable=False),
+    sa.Column('education_format', sa.Enum('GROUP', 'INDIVIDUAL', 'SELF_PACED', 'MENTORLED', 'COHORT', name='educationformat'), nullable=False),
     sa.Column('duration_hours', sa.Integer(), nullable=False),
     sa.Column('cost', sa.Numeric(precision=10, scale=2), nullable=False),
     sa.Column('discounted_cost', sa.Numeric(precision=10, scale=2), nullable=True),
     sa.Column('start_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('end_date', sa.DateTime(timezone=True), nullable=True),
     sa.Column('certificate_type', sa.Enum('CERTIFICATE', 'DIPLOMA', 'ATTESTATION', 'NONE', name='certificatetype'), nullable=False),
     sa.Column('status', sa.Enum('ACTIVE', 'ENROLLING', 'ARCHIVED', 'DRAFT', name='coursestatus'), nullable=False),
     sa.Column('is_published', sa.Boolean(), nullable=False),
+    sa.Column('locations', postgresql.ARRAY(sa.String(length=255)), server_default=sa.text("'{}'"), nullable=False),
+    sa.Column('search_vector', postgresql.TSVECTOR(), server_default=sa.text("''::tsvector"), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('course_id')
     )
+    op.create_index('ix_courses_search_vector', 'courses', ['search_vector'], unique=False, postgresql_using='gin')
     op.create_table('identities',
     sa.Column('identity_id', sa.UUID(), nullable=False),
     sa.Column('role', sa.Enum('USER', 'ADMIN', name='role'), nullable=False),
@@ -62,6 +67,7 @@ def upgrade() -> None:
     sa.Column('position', sa.String(length=255), nullable=True),
     sa.Column('bio', sa.Text(), nullable=True),
     sa.Column('photo_url', sa.String(length=512), nullable=True),
+    sa.Column('competencies', postgresql.ARRAY(sa.String(length=255)), server_default=sa.text("'{}'"), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('lecturer_id')
@@ -173,6 +179,7 @@ def downgrade() -> None:
     op.drop_table('skills')
     op.drop_table('lecturers')
     op.drop_table('identities')
+    op.drop_index('ix_courses_search_vector', table_name='courses', postgresql_using='gin')
     op.drop_table('courses')
     op.drop_table('categories')
     # ### end Alembic commands ###

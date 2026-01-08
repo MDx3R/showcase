@@ -1,9 +1,9 @@
 """DTO for CreateCourse command."""
 
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from common.domain.value_objects.datetime import DateTime
 from pydantic import BaseModel, Field
 from showcase.course.domain.value_objects import (
     CertificateType,
@@ -34,8 +34,8 @@ class CreateCourseCommand(BaseModel):
     discounted_cost: Decimal | None
     duration_hours: int = Field(default=0, ge=0)
 
-    start_date: DateTime | None
-    end_date: DateTime | None
+    start_date: datetime | None
+    end_date: datetime | None
 
     status: CourseStatus
     is_published: bool

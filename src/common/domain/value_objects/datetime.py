@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta, timezone
-from typing import Any
+from typing import Any, Self
 
 from common.domain.exceptions import InvariantViolationError
 
@@ -92,3 +92,10 @@ class DateTime:
 
     def __hash__(self) -> Any:
         return hash(self.value)
+
+    @classmethod
+    def new(cls, value: datetime | None) -> Self | None:
+        if value is None:
+            return None
+
+        return cls(value=value)
