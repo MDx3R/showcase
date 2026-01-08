@@ -1,23 +1,78 @@
 """Course read repository interface."""
 
 from abc import ABC, abstractmethod
+from enum import Enum
 from uuid import UUID
 
 from pydantic import BaseModel
 from showcase.course.application.read_models.course_read_model import CourseReadModel
 from showcase.course.domain.value_objects import CourseStatus
-from showcase.course.domain.value_objects.format import Format
+from showcase.course.domain.value_objects.format import EducationFormat, Format
 
 
-class CourseFilter(BaseModel):
+class CourseSortField(str, Enum):
+    TITLE = "title"
+    PRICE = "price"
+    DURATION = "duration"
+    NONE = "none"
+
+
+class CourseSortOrder(str, Enum):
+    ASC = "asc"
+    DESC = "desc"
+
+
+class SimpleCoursesFilter(BaseModel):
+    """Simplified filter to get all courses with optional filters."""
+
+    status: CourseStatus = CourseStatus.ACTIVE
+    is_published: bool = True
+
     categories: list[str] | None = None
     format: Format | None = None
     max_duration_hours: int | None = None
     certificate_required: bool | None = None
-    status: CourseStatus = CourseStatus.ACTIVE
-    is_published: bool = True
-    limit: int = 10
+
     skip: int = 0
+    limit: int = 10
+
+
+class CoursesFilter(BaseModel):
+    """Filter to get all courses with optional filters."""
+
+    # base filters
+    is_published: bool = True
+    status: CourseStatus = CourseStatus.ACTIVE
+
+    # text search
+    search: str | None = None
+
+    # taxonomy filters
+    formats: list[Format] | None = None
+    education_types: list[EducationFormat] | None = None
+
+    tags: list[str] | None = None
+    category_ids: list[UUID] | None = None
+
+    # price filters
+    price_min: int | None = None
+    price_max: int | None = None
+
+    # duration filters (e.g. hours / weeks — на уровне сервиса)
+    duration_min: int | None = None
+    duration_max: int | None = None
+
+    # flags
+    has_discount: bool | None = None
+    is_upcoming: bool = True
+
+    # sorting
+    sort_field: CourseSortField = CourseSortField.NONE
+    sort_order: CourseSortOrder = CourseSortOrder.ASC
+
+    # pagination
+    skip: int = 0
+    limit: int = 100
 
 
 class ICourseReadRepository(ABC):
@@ -48,9 +103,14 @@ class ICourseReadRepository(ABC):
         pass
 
     @abstractmethod
-    async def filter(self, filter: CourseFilter) -> list[CourseReadModel]:
-        """Deterministic filtering.
+    async def filter(self, filter: SimpleCoursesFilter) -> list[CourseReadModel]:
+        """Deterministic simple filtering.
 
         Returns top-N courses strictly matching filters.
         """
+        pass
+
+    @abstractmethod
+    async def filter_extended(self, filter: CoursesFilter) -> list[CourseReadModel]:
+        """Deterministic extended filtering."""
         pass

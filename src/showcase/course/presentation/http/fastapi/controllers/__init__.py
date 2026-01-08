@@ -37,6 +37,9 @@ from showcase.course.application.dtos.queries import (
     GetTagByIdQuery,
     GetTagsQuery,
 )
+from showcase.course.application.interfaces.repositories.course_read_repository import (
+    CoursesFilter,
+)
 from showcase.course.application.interfaces.services.recommendation_service import (
     GetRecommendationsDTO,
     IRecommendationService,
@@ -74,6 +77,7 @@ from showcase.course.application.interfaces.usecases.command.update_tag_use_case
 )
 from showcase.course.application.interfaces.usecases.query import (
     IGetCourseByIdUseCase,
+    IGetCoursesExtendedUseCase,
     IGetCoursesSearchUseCase,
     IGetCoursesUseCase,
     IGetSkillByIdUseCase,
@@ -111,6 +115,7 @@ class CourseController:
     list_enrollments_use_case: IListEnrollmentsByCourseUseCase = Depends()
     create_course_use_case: ICreateCourseUseCase = Depends()
     update_course_use_case: IUpdateCourseUseCase = Depends()
+    get_courses_extended_use_case: IGetCoursesExtendedUseCase = Depends()
     delete_course_use_case: IDeleteCourseUseCase = Depends()
 
     @course_router.get("/")
@@ -144,6 +149,11 @@ class CourseController:
         return await self.get_courses_search_use_case.execute(
             query=GetCoursesSearchQuery(query=q, skip=skip, limit=limit)
         )
+
+    @course_router.get("/filter")
+    async def filter_extended(self, filter: CoursesFilter) -> list[CourseReadModel]:
+        """Filter endpoint for extended search."""
+        return await self.get_courses_extended_use_case.execute(filter)
 
     @course_router.get("/{course_id}")
     async def get_course_by_id(self, course_id: UUID) -> CourseReadModel:

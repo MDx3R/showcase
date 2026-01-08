@@ -10,7 +10,10 @@ from showcase.category.infrastructure.database.postgres.sqlalchemy.models.catego
 )
 from showcase.course.application.interfaces.repositories import ICourseReadRepository
 from showcase.course.application.interfaces.repositories.course_read_repository import (
-    CourseFilter,
+    CoursesFilter,
+    CourseSortField,
+    CourseSortOrder,
+    SimpleCoursesFilter,
 )
 from showcase.course.application.read_models.course_read_model import CourseReadModel
 from showcase.course.domain.value_objects import CourseStatus
@@ -115,7 +118,7 @@ class CourseReadRepository(ICourseReadRepository):
         models = await self.executor.execute_scalar_many(stmt)
         return [CourseReadMapper.to_read_model(model) for model in models]
 
-    async def filter(self, filter: CourseFilter) -> list[CourseReadModel]:
+    async def filter(self, filter: SimpleCoursesFilter) -> list[CourseReadModel]:
         """Deterministic filtering.
 
         Returns top-N courses strictly matching filters.
@@ -144,6 +147,96 @@ class CourseReadRepository(ICourseReadRepository):
         stmt = stmt.order_by(
             CourseBase.start_date.asc().nulls_last(),
             CourseBase.duration_hours.asc(),
+        )
+
+        stmt = (
+            stmt.options(
+                joinedload(CourseBase.sections),
+                joinedload(CourseBase.categories),
+                joinedload(CourseBase.tags),
+                joinedload(CourseBase.acquired_skills),
+                joinedload(CourseBase.lecturers),
+            )
+            .offset(filter.skip)
+            .limit(filter.limit)
+        )
+
+        models = await self.executor.execute_scalar_many(stmt)
+        return [CourseReadMapper.to_read_model(model) for model in models]
+
+    async def filter_extended(self, filter: CoursesFilter) -> list[CourseReadModel]:
+        stmt = select(CourseBase).distinct()
+
+        # Base visibility filters
+        stmt = stmt.where(CourseBase.status == filter.status)
+        stmt = stmt.where(CourseBase.is_published == filter.is_published)
+
+        # Full-text search
+        if filter.search:
+            vector = func.to_tsvector(
+                "russian", func.concat_ws(" ", CourseBase.name, CourseBase.description)
+            )
+            ts_query = func.plainto_tsquery("russian", filter.search)
+            stmt = stmt.where(vector.op("@@")(ts_query))
+
+        # Formats and education types
+        if filter.formats:
+            stmt = stmt.where(CourseBase.format.in_(filter.formats))
+        if filter.education_types:
+            stmt = stmt.where(CourseBase.education_format.in_(filter.education_types))
+
+        # Tags
+        if filter.tags:
+            stmt = stmt.join(CourseBase.tags).where(
+                CourseBase.tags.property.mapper.class_.name.in_(filter.tags)
+            )
+
+        # Category ids
+        if filter.category_ids:
+            stmt = stmt.join(CourseBase.categories).where(
+                CategoryBase.category_id.in_(filter.category_ids)
+            )
+
+        # Price filters
+        if filter.price_min is not None:
+            stmt = stmt.where(CourseBase.cost >= filter.price_min)
+        if filter.price_max is not None:
+            stmt = stmt.where(CourseBase.cost <= filter.price_max)
+
+        # Duration filters
+        if filter.duration_min is not None:
+            stmt = stmt.where(CourseBase.duration_hours >= filter.duration_min)
+        if filter.duration_max is not None:
+            stmt = stmt.where(CourseBase.duration_hours <= filter.duration_max)
+
+        # Has discount
+        if filter.has_discount is True:
+            stmt = stmt.where(CourseBase.discounted_cost.isnot(None))
+
+        # Upcoming: courses with start_date in the future
+        if filter.is_upcoming:
+            stmt = stmt.where(CourseBase.start_date > func.now())
+
+        # Sorting
+        # Map sort field to column
+        sort_col = None
+        if filter.sort_field == CourseSortField.TITLE:
+            sort_col = CourseBase.name
+        elif filter.sort_field == CourseSortField.PRICE:
+            sort_col = CourseBase.cost
+        elif filter.sort_field == CourseSortField.DURATION:
+            sort_col = CourseBase.duration_hours
+        else:
+            sort_col = CourseBase.start_date
+
+        if filter.sort_order == CourseSortOrder.DESC:
+            stmt = stmt.order_by(sort_col.desc())
+        else:
+            stmt = stmt.order_by(sort_col.asc())
+
+        # Default ordering to keep stable results
+        stmt = stmt.order_by(
+            CourseBase.start_date.asc().nulls_last(), CourseBase.duration_hours.asc()
         )
 
         stmt = (

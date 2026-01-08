@@ -7,8 +7,8 @@ from showcase.category.application.interfaces.repositories.category_read_reposit
     ICategoryReadRepository,
 )
 from showcase.course.application.interfaces.repositories.course_read_repository import (
-    CourseFilter,
     ICourseReadRepository,
+    SimpleCoursesFilter,
 )
 from showcase.course.application.interfaces.services.recommendation_service import (
     GetRecommendationsDTO,
@@ -24,8 +24,8 @@ class CourseFilterLLM(BaseModel):
     max_duration_hours: int | None = None
     certificate_required: bool | None = None
 
-    def to_filter(self, limit: int, skip: int) -> CourseFilter:
-        return CourseFilter(
+    def to_filter(self, limit: int, skip: int) -> SimpleCoursesFilter:
+        return SimpleCoursesFilter(
             categories=self.category_names,
             format=self.format,
             max_duration_hours=self.max_duration_hours,
@@ -57,7 +57,7 @@ class RecommendationService(IRecommendationService):
         categories = await self.category_repository.get_all()
         category_names = {c.name.lower() for c in categories}
 
-        # ---------- 2. LLM → CourseFilter ----------
+        # ---------- 2. LLM → SimpleCoursesFilter ----------
         filter_prompt = PromptTemplate(
             """
             Ты — ассистент подбора образовательных курсов.
@@ -90,7 +90,7 @@ class RecommendationService(IRecommendationService):
 
         filter_response = CourseFilterLLM.model_validate_json(response.text)
 
-        # ---------- 3. Map LLM → CourseFilter ----------
+        # ---------- 3. Map LLM → SimpleCoursesFilter ----------
         filter_query = filter_response.to_filter(
             min(self.MAX_LIMIT, dto.limit), skip=dto.skip
         )

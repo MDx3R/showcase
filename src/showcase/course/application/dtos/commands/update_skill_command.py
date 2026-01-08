@@ -7,5 +7,5 @@ from uuid import UUID
 @dataclass
 class UpdateSkillCommand:
     skill_id: UUID
-    name: str | None = None
-    description: str | None = None
+    name: str
+    description: str | None

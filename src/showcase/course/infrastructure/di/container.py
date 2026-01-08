@@ -24,6 +24,9 @@ from showcase.course.application.usecases import (
 from showcase.course.application.usecases.command.enroll_user_use_case import (
     EnrollUserUseCase,
 )
+from showcase.course.application.usecases.get_courses_extended_usecase import (
+    GetCoursesExtendedUseCase,
+)
 from showcase.course.application.usecases.query.list_enrollments_by_course_use_case import (
     ListEnrollmentsByCourseUseCase,
 )
@@ -69,6 +72,9 @@ class CourseContainer(containers.DeclarativeContainer):
     )
     get_courses_search_usecase = providers.Factory(
         GetCoursesSearchUseCase, course_read_repository
+    )
+    filter_courses_usecase = providers.Factory(
+        GetCoursesExtendedUseCase, course_read_repository
     )
     get_skills_usecase = providers.Factory(GetSkillsUseCase, skill_read_repository)
     get_skill_by_id_usecase = providers.Factory(

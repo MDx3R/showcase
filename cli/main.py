@@ -91,6 +91,9 @@ from showcase.course.application.interfaces.usecases.query import (
 )
 
 # Controllers (read-side)
+from showcase.course.application.interfaces.usecases.query.get_courses_extended_usecase import (
+    IGetCoursesExtendedUseCase,
+)
 from showcase.course.application.interfaces.usecases.query.list_enrollments_by_course_use_case import (
     IListEnrollmentsByCourseUseCase,
 )
@@ -128,6 +131,9 @@ def init_course(app: FastAPI, container: CourseContainer) -> None:
 
     app.dependency_overrides[IGetCoursesUseCase] = (
         lambda: container.get_courses_usecase()
+    )
+    app.dependency_overrides[IGetCoursesExtendedUseCase] = (
+        lambda: container.filter_courses_usecase()
     )
     app.dependency_overrides[IGetCourseByIdUseCase] = (
         lambda: container.get_course_by_id_usecase()
