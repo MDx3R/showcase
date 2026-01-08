@@ -9,3 +9,13 @@ class Format(str, Enum):
     ONLINE = "online"
     OFFLINE = "offline"
     MIXED = "mixed"
+
+
+class EducationFormat(str, Enum):
+    """Format of education process."""
+
+    GROUP = "group"  # обучение в группе
+    INDIVIDUAL = "individual"  # индивидуально с куратором / преподавателем
+    SELF_PACED = "self_paced"  # самостоятельное обучение
+    MENTORLED = "mentorled"  # с ментором (без фиксированной группы)
+    COHORT = "cohort"  # поток / набор с датами

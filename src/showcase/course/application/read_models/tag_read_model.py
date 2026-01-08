@@ -9,4 +9,4 @@ class TagReadModel:
     """Immutable read model for tag."""
 
     tag_id: UUID
-    name: str
+    value: str

@@ -29,12 +29,10 @@ class CreateCourseUseCase(ICreateCourseUseCase):
         self.tag_repository = tag_repository
 
     async def execute(self, command: CreateCourseCommand) -> UUID:
-        # Map CreateCourseSectionDTO to domain CourseSection objects
         sections: list[CourseSection] = []
         if command.sections:
             sections = [
                 CourseSection(
-                    section_id=self.uuid_generator.create(),
                     name=sec.name,
                     description=sec.description,
                     order_num=sec.order_num,
@@ -63,18 +61,21 @@ class CreateCourseUseCase(ICreateCourseUseCase):
             name=command.name,
             description=command.description,
             format=command.format,
+            education_format=command.education_format,
             duration_hours=command.duration_hours,
             cost=command.cost,
             discounted_cost=command.discounted_cost,
             start_date=command.start_date,
+            end_date=command.end_date,
             certificate_type=command.certificate_type,
             status=command.status,
             is_published=command.is_published,
+            locations=command.locations,
             sections=sections,
-            category_ids=command.category_ids or [],
+            category_ids=command.category_ids,
             tag_ids=tag_ids,
-            acquired_skill_ids=command.acquired_skill_ids or [],
-            lecturer_ids=command.lecturer_ids or [],
+            acquired_skill_ids=command.acquired_skill_ids,
+            lecturer_ids=command.lecturer_ids,
         )
         await self.course_repository.add(course)
         return course.course_id

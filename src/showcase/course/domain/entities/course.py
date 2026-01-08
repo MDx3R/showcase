@@ -1,19 +1,20 @@
 """Course domain entity."""
 
 from dataclasses import dataclass, field
-from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
 from common.domain.exceptions import InvariantViolationError
+from common.domain.value_objects.datetime import DateTime
 from showcase.course.domain.value_objects import CertificateType, CourseStatus, Format
+from showcase.course.domain.value_objects.format import EducationFormat
 
 
-@dataclass
+@dataclass(frozen=True)
 class CourseSection:
     """A section (module) within a course - value object of Course aggregate."""
 
-    section_id: UUID
+    # section_id: UUID # remove from domain, refactor behaviour from entity to vo; thus leave field on persistence side for record identity, set database defaults
     name: str
     description: str | None
     order_num: int
@@ -34,16 +35,24 @@ class Course:
     """Course aggregate root with sections as part of the aggregate."""
 
     course_id: UUID
+
     name: str
     description: str | None
+
     format: Format
+    education_format: EducationFormat  # new
     duration_hours: int
     cost: Decimal
     discounted_cost: Decimal | None
-    start_date: datetime | None
     certificate_type: CertificateType
+
+    start_date: DateTime | None  # type change from datetime; use timezone aware only vo
+    end_date: DateTime | None  # new
+
     status: CourseStatus
     is_published: bool
+
+    locations: list[str] = field(default_factory=list[str])  # new
 
     sections: list[CourseSection] = field(default_factory=list[CourseSection])
 
@@ -68,28 +77,9 @@ class Course:
                 raise InvariantViolationError("Discounted cost cannot exceed cost")
         if self.is_published and self.status == CourseStatus.DRAFT:
             raise InvariantViolationError("Published course cannot have DRAFT status")
+
         # Validate section ordering is unique and sequential
         if self.sections:
-            orders = sorted([s.order_num for s in self.sections])
-            if len(orders) != len(set(orders)):
+            orders = {s.order_num for s in self.sections}
+            if len(self.sections) != len(orders):
                 raise InvariantViolationError("Section order numbers must be unique")
-
-    def add_section(self, section: CourseSection) -> None:
-        """Add a section to the course."""
-        if any(s.order_num == section.order_num for s in self.sections):
-            raise InvariantViolationError(
-                f"Section with order {section.order_num} already exists"
-            )
-        self.sections.append(section)
-
-    def remove_section(self, section_id: UUID) -> None:
-        """Remove a section from the course."""
-        self.sections = [s for s in self.sections if s.section_id != section_id]
-
-    def update_section(self, section: CourseSection) -> None:
-        """Update an existing section."""
-        for i, s in enumerate(self.sections):
-            if s.section_id == section.section_id:
-                self.sections[i] = section
-                return
-        raise InvariantViolationError(f"Section {section.section_id} not found")

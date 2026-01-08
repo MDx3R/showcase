@@ -10,7 +10,7 @@ class TagReadMapper:
     @staticmethod
     def to_read_model(model: TagBase) -> TagReadModel:
         """Map tag ORM model to read model."""
-        return TagReadModel(tag_id=model.tag_id, name=model.name)
+        return TagReadModel(tag_id=model.tag_id, value=model.name)
 
 
 class TagMapper:

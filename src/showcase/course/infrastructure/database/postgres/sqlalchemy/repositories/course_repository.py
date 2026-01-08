@@ -91,7 +91,6 @@ class CourseRepository(ICourseRepository):
         await self.executor.add_all(
             [
                 CourseSectionBase(
-                    section_id=sec.section_id,
                     course_id=course.course_id,
                     name=sec.name,
                     description=sec.description,
@@ -136,7 +135,6 @@ class CourseRepository(ICourseRepository):
         # Map sections from ORM to domain CourseSection objects
         sections = [
             CourseSection(
-                section_id=sec.section_id,
                 name=sec.name,
                 description=sec.description,
                 order_num=sec.order_num,
@@ -150,13 +148,16 @@ class CourseRepository(ICourseRepository):
             name=model.name,
             description=model.description,
             format=model.format,
+            education_format=model.education_format,
             duration_hours=model.duration_hours,
             cost=model.cost,
             discounted_cost=model.discounted_cost,
             start_date=model.start_date,
+            end_date=model.end_date,
             certificate_type=model.certificate_type,
             status=model.status,
             is_published=model.is_published,
+            locations=model.locations,
             sections=sections,
             category_ids=[cat.category_id for cat in model.categories],
             tag_ids=[tag.tag_id for tag in model.tags],
@@ -172,11 +173,14 @@ class CourseRepository(ICourseRepository):
             name=entity.name,
             description=entity.description,
             format=entity.format,
+            education_format=entity.education_format,
             duration_hours=entity.duration_hours,
             cost=entity.cost,
             discounted_cost=entity.discounted_cost,
             start_date=entity.start_date,
+            end_date=entity.end_date,
             certificate_type=entity.certificate_type,
             status=entity.status,
             is_published=entity.is_published,
+            locations=entity.locations,
         )

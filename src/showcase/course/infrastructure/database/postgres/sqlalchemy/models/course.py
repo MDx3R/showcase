@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
+from common.domain.value_objects.datetime import DateTime
 from common.infrastructure.database.postgres.sqlalchemy.models import Base
 from showcase.category.infrastructure.database.postgres.sqlalchemy.models import (
     CategoryBase,
 )
-from showcase.course.domain.value_objects import CertificateType, CourseStatus, Format
+from showcase.course.domain.value_objects import (
+    CertificateType,
+    CourseStatus,
+    EducationFormat,
+    Format,
+)
 from showcase.course.infrastructure.database.postgres.sqlalchemy.models.skill import (
     SkillBase,
 )
@@ -22,15 +27,16 @@ from showcase.lecturer.infrastructure.database.postgres.sqlalchemy.models import
 )
 from sqlalchemy import (
     Boolean,
-    DateTime,
+    DateTime as SQLDateTime,
     Enum,
     ForeignKey,
     Integer,
     Numeric,
     String,
     Text,
+    text,
 )
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.dialects.postgresql import ARRAY, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -43,13 +49,19 @@ class CourseBase(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     format: Mapped[Format] = mapped_column(Enum(Format), nullable=False)
+    education_format: Mapped[EducationFormat] = mapped_column(
+        Enum(EducationFormat), nullable=False
+    )
     duration_hours: Mapped[int] = mapped_column(Integer, nullable=False)
     cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     discounted_cost: Mapped[Decimal | None] = mapped_column(
         Numeric(10, 2), nullable=True
     )
-    start_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+    start_date: Mapped[DateTime | None] = mapped_column(
+        SQLDateTime(timezone=True), nullable=True
+    )
+    end_date: Mapped[DateTime | None] = mapped_column(
+        SQLDateTime(timezone=True), nullable=True
     )
     certificate_type: Mapped[CertificateType] = mapped_column(
         Enum(CertificateType), nullable=False
@@ -58,6 +70,9 @@ class CourseBase(Base):
         Enum(CourseStatus), nullable=False, default=CourseStatus.DRAFT
     )
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
+    locations: Mapped[list[str]] = mapped_column(
+        ARRAY(String(255)), nullable=False, server_default=text("'{}'")
+    )
 
     sections: Mapped[list[CourseSectionBase]] = relationship(
         "CourseSectionBase", lazy="noload", order_by="CourseSectionBase.order_num"
@@ -88,7 +103,7 @@ class CourseSectionBase(Base):
 
     __tablename__ = "course_sections"
 
-    section_id: Mapped[UUID] = mapped_column(PGUUID, primary_key=True)
+    section_id: Mapped[UUID] = mapped_column(PGUUID, primary_key=True, default=uuid4)
     course_id: Mapped[UUID] = mapped_column(
         ForeignKey("courses.course_id", ondelete="CASCADE"), nullable=False
     )

@@ -2,7 +2,7 @@
 
 from .certificate_type import CertificateType
 from .course_status import CourseStatus
-from .format import Format
+from .format import EducationFormat, Format
 
 
-__all__ = ["CertificateType", "CourseStatus", "Format"]
+__all__ = ["CertificateType", "CourseStatus", "EducationFormat", "Format"]
