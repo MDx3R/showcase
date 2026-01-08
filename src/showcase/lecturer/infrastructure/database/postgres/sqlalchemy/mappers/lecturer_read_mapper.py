@@ -20,6 +20,5 @@ class LecturerReadMapper:
             position=model.position,
             bio=model.bio,
             photo_url=model.photo_url,
-            created_at=model.created_at,
-            updated_at=model.updated_at,
+            competencies=model.competencies,
         )

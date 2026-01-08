@@ -27,6 +27,7 @@ class CreateLecturerUseCase(ICreateLecturerUseCase):
             position=command.position,
             bio=command.bio,
             photo_url=command.photo_url,
+            competencies=command.competencies,
         )
         await self.lecturer_repository.add(lecturer)
         return lecturer.lecturer_id

@@ -1,6 +1,6 @@
 """Lecturer domain entity."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 from common.domain.exceptions import InvariantViolationError
@@ -15,6 +15,7 @@ class Lecturer:
     position: str | None
     bio: str | None
     photo_url: str | None
+    competencies: list[str] = field(default_factory=list[str])
 
     def __post_init__(self) -> None:
         """Validate domain invariants."""

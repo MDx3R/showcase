@@ -17,13 +17,12 @@ class UpdateLecturerUseCase(IUpdateLecturerUseCase):
 
     async def execute(self, command: UpdateLecturerCommand) -> UUID:
         lecturer = await self.lecturer_repository.get_by_id(command.lecturer_id)
-        if command.name is not None:
-            lecturer.name = command.name
-        if command.position is not None:
-            lecturer.position = command.position
-        if command.bio is not None:
-            lecturer.bio = command.bio
-        if command.photo_url is not None:
-            lecturer.photo_url = command.photo_url
+
+        lecturer.name = command.name
+        lecturer.position = command.position
+        lecturer.bio = command.bio
+        lecturer.photo_url = command.photo_url
+        lecturer.competencies = command.competencies
+
         await self.lecturer_repository.update(lecturer)
         return command.lecturer_id

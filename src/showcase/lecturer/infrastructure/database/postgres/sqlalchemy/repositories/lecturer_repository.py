@@ -52,6 +52,7 @@ class LecturerRepository(ILecturerRepository):
             position=model.position,
             photo_url=model.photo_url,
             bio=model.bio,
+            competencies=model.competencies,
         )
 
     @staticmethod
@@ -63,4 +64,5 @@ class LecturerRepository(ILecturerRepository):
             position=entity.position,
             photo_url=entity.photo_url,
             bio=entity.bio,
+            competencies=entity.competencies,
         )

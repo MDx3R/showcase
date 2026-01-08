@@ -1,7 +1,6 @@
 """Lecturer read models."""
 
 from dataclasses import dataclass
-from datetime import datetime
 from uuid import UUID
 
 
@@ -14,5 +13,4 @@ class LecturerReadModel:
     position: str | None
     bio: str | None
     photo_url: str | None
-    created_at: datetime
-    updated_at: datetime
+    competencies: list[str]
