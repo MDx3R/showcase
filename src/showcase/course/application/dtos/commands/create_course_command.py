@@ -1,10 +1,10 @@
-"""DTO for CreateCourse command."""
+"""Command DTO for CreateCourse (application layer - frozen dataclass)."""
 
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
 from showcase.course.domain.value_objects import (
     CertificateType,
     CourseStatus,
@@ -13,16 +13,20 @@ from showcase.course.domain.value_objects import (
 )
 
 
-class CreateCourseSectionDTO(BaseModel):
-    """DTO for creating a course section."""
+@dataclass(frozen=True)
+class CreateCourseSectionDTO:
+    """Value object for course section in command."""
 
     name: str
     description: str | None
-    order_num: int = Field(default=0, ge=0)
-    hours: int | None = Field(default=None, ge=1)
+    order_num: int
+    hours: int | None
 
 
-class CreateCourseCommand(BaseModel):
+@dataclass(frozen=True)
+class CreateCourseCommand:
+    """Command to create a course."""
+
     name: str
     description: str | None
 
@@ -32,8 +36,7 @@ class CreateCourseCommand(BaseModel):
 
     cost: Decimal
     discounted_cost: Decimal | None
-    duration_hours: int = Field(default=0, ge=0)
-
+    duration_hours: int
     start_date: datetime | None
     end_date: datetime | None
 

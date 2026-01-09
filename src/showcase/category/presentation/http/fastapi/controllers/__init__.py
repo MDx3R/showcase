@@ -32,6 +32,10 @@ from showcase.category.application.interfaces.usecases.query import (
 from showcase.category.application.read_models.category_read_model import (
     CategoryReadModel,
 )
+from showcase.category.presentation.http.fastapi.dto.request import (
+    CreateCategoryRequest,
+    UpdateCategoryRequest,
+)
 
 
 category_router = APIRouter(prefix="/categories", tags=["categories"])
@@ -67,17 +71,25 @@ class CategoryController:
             raise HTTPException(status_code=404, detail=str(e)) from e
 
     @category_router.post("/")
-    async def create_category(self, command: CreateCategoryCommand) -> IDResponse:
+    async def create_category(self, request: CreateCategoryRequest) -> IDResponse:
         """Create a new category."""
+        command = CreateCategoryCommand(
+            name=request.name,
+            description=request.description,
+        )
         category_id = await self.create_category_use_case.execute(command)
         return IDResponse.from_uuid(category_id)
 
     @category_router.put("/{category_id}")
     async def update_category(
-        self, category_id: UUID, command: UpdateCategoryCommand
+        self, category_id: UUID, request: UpdateCategoryRequest
     ) -> IDResponse:
         """Update an existing category."""
-        command.category_id = category_id
+        command = UpdateCategoryCommand(
+            category_id=category_id,
+            name=request.name,
+            description=request.description,
+        )
         updated_id = await self.update_category_use_case.execute(command)
         return IDResponse.from_uuid(updated_id)
 

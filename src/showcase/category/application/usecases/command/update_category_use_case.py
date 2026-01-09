@@ -17,9 +17,9 @@ class UpdateCategoryUseCase(IUpdateCategoryUseCase):
 
     async def execute(self, command: UpdateCategoryCommand) -> UUID:
         category = await self.category_repository.get_by_id(command.category_id)
-        if command.name is not None:
-            category.name = command.name
-        if command.description is not None:
-            category.description = command.description
+
+        category.name = command.name
+        category.description = command.description
+
         await self.category_repository.update(category)
         return command.category_id

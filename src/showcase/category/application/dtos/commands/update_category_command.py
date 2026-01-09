@@ -1,11 +1,11 @@
-"""DTO for UpdateCategory command."""
+"""Command DTO for UpdateCategory (application layer - frozen dataclass)."""
 
 from dataclasses import dataclass
 from uuid import UUID
 
 
-@dataclass
+@dataclass(frozen=True)
 class UpdateCategoryCommand:
     category_id: UUID
-    name: str | None = None
-    description: str | None = None
+    name: str
+    description: str | None

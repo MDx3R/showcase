@@ -32,6 +32,10 @@ from showcase.lecturer.application.interfaces.usecases.query import (
 from showcase.lecturer.application.read_models.lecturer_read_model import (
     LecturerReadModel,
 )
+from showcase.lecturer.presentation.http.fastapi.dto.request import (
+    CreateLecturerRequest,
+    UpdateLecturerRequest,
+)
 
 
 lecturer_router = APIRouter(prefix="/lecturers", tags=["lecturers"])
@@ -64,20 +68,34 @@ class LecturerController:
             query = GetLecturerByIdQuery(lecturer_id=lecturer_id)
             return await self.get_lecturer_by_id_use_case.execute(query)
         except ValueError as e:
-            raise HTTPException(status_code=404, detail=str(e))
+            raise HTTPException(status_code=404, detail=str(e)) from e
 
     @lecturer_router.post("/")
-    async def create_lecturer(self, command: CreateLecturerCommand) -> IDResponse:
+    async def create_lecturer(self, request: CreateLecturerRequest) -> IDResponse:
         """Create a new lecturer."""
+        command = CreateLecturerCommand(
+            name=request.name,
+            position=request.position,
+            bio=request.bio,
+            photo_url=request.photo_url,
+            competencies=request.competencies,
+        )
         lecturer_id = await self.create_lecturer_use_case.execute(command)
         return IDResponse.from_uuid(lecturer_id)
 
     @lecturer_router.put("/{lecturer_id}")
     async def update_lecturer(
-        self, lecturer_id: UUID, command: UpdateLecturerCommand
+        self, lecturer_id: UUID, request: UpdateLecturerRequest
     ) -> IDResponse:
         """Update an existing lecturer."""
-        command.lecturer_id = lecturer_id
+        command = UpdateLecturerCommand(
+            lecturer_id=lecturer_id,
+            name=request.name,
+            position=request.position,
+            bio=request.bio,
+            photo_url=request.photo_url,
+            competencies=request.competencies,
+        )
         updated_id = await self.update_lecturer_use_case.execute(command)
         return IDResponse.from_uuid(updated_id)
 

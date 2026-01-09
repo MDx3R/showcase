@@ -1,14 +1,14 @@
-"""DTO for UpdateLecturer command."""
+"""Command DTO for UpdateLecturer (application layer - frozen dataclass)."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from uuid import UUID
 
 
-@dataclass
+@dataclass(frozen=True)
 class UpdateLecturerCommand:
     lecturer_id: UUID
     name: str
     position: str | None
     bio: str | None
     photo_url: str | None
-    competencies: list[str] = field(default_factory=list[str])
+    competencies: list[str]

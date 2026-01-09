@@ -5,10 +5,13 @@ from typing import Annotated
 from uuid import UUID
 
 from common.presentation.http.dto.response import IDResponse
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
 from fastapi_utils.cbv import cbv
+from idp.identity.domain.value_objects.descriptor import IdentityDescriptor
+from idp.identity.presentation.http.fastapi.auth import get_descriptor
 from showcase.course.application.dtos.commands.create_course_command import (
     CreateCourseCommand,
+    CreateCourseSectionDTO,
 )
 from showcase.course.application.dtos.commands.create_skill_command import (
     CreateSkillCommand,
@@ -21,6 +24,7 @@ from showcase.course.application.dtos.commands.enroll_user_command import (
 )
 from showcase.course.application.dtos.commands.update_course_command import (
     UpdateCourseCommand,
+    UpdateCourseSectionDTO,
 )
 from showcase.course.application.dtos.commands.update_skill_command import (
     UpdateSkillCommand,
@@ -95,7 +99,16 @@ from showcase.course.application.read_models.enrollment_read_model import (
 from showcase.course.application.read_models.skill_read_model import SkillReadModel
 from showcase.course.application.read_models.tag_read_model import TagReadModel
 from showcase.course.domain.value_objects import CourseStatus
-from showcase.course.presentation.http.fastapi.dto.request import EnrollRequest
+from showcase.course.presentation.http.fastapi.dto.request import (
+    CreateCourseRequest,
+    CreateSkillRequest,
+    CreateTagRequest,
+    EnrollAuthenticatedRequest,
+    EnrollRequest,
+    UpdateCourseRequest,
+    UpdateSkillRequest,
+    UpdateTagRequest,
+)
 
 
 course_router = APIRouter(prefix="/courses", tags=["courses"])
@@ -163,38 +176,115 @@ class CourseController:
         )
 
     @course_router.post("/")
-    async def create_course(self, command: CreateCourseCommand) -> IDResponse:
+    async def create_course(self, request: CreateCourseRequest) -> IDResponse:
         """Create a new course."""
+        sections = [
+            CreateCourseSectionDTO(
+                name=s.name,
+                description=s.description,
+                order_num=s.order_num,
+                hours=s.hours,
+            )
+            for s in request.sections
+        ]
+        command = CreateCourseCommand(
+            name=request.name,
+            description=request.description,
+            format=request.format,
+            education_format=request.education_format,
+            certificate_type=request.certificate_type,
+            cost=request.cost,
+            discounted_cost=request.discounted_cost,
+            duration_hours=request.duration_hours,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            status=request.status,
+            is_published=request.is_published,
+            locations=request.locations,
+            sections=sections,
+            tags=request.tags,
+            acquired_skill_ids=request.acquired_skill_ids,
+            category_ids=request.category_ids,
+            lecturer_ids=request.lecturer_ids,
+        )
         course_id = await self.create_course_use_case.execute(command)
         return IDResponse.from_uuid(course_id)
 
-    @course_router.put("/{course_id}")
+    @course_router.put("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
     async def update_course(
-        self, course_id: UUID, command: UpdateCourseCommand
-    ) -> IDResponse:
+        self, course_id: UUID, request: UpdateCourseRequest
+    ) -> None:
         """Update an existing course."""
-        command.course_id = course_id
-        updated_id = await self.update_course_use_case.execute(command)
-        return IDResponse.from_uuid(updated_id)
+        sections = [
+            UpdateCourseSectionDTO(
+                name=s.name,
+                description=s.description,
+                order_num=s.order_num,
+                hours=s.hours,
+            )
+            for s in request.sections
+        ]
+        command = UpdateCourseCommand(
+            course_id=course_id,
+            name=request.name,
+            description=request.description,
+            format=request.format,
+            education_format=request.education_format,
+            certificate_type=request.certificate_type,
+            cost=request.cost,
+            discounted_cost=request.discounted_cost,
+            duration_hours=request.duration_hours,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            status=request.status,
+            is_published=request.is_published,
+            locations=request.locations,
+            sections=sections,
+            tags=request.tags,
+            acquired_skill_ids=request.acquired_skill_ids,
+            category_ids=request.category_ids,
+            lecturer_ids=request.lecturer_ids,
+        )
+        await self.update_course_use_case.execute(command)
 
-    @course_router.delete("/{course_id}")
-    async def delete_course(self, course_id: UUID) -> IDResponse:
+    @course_router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def delete_course(self, course_id: UUID) -> None:
         """Delete a course."""
-        deleted_id = await self.delete_course_use_case.execute(course_id)
-        return IDResponse.from_uuid(deleted_id)
+        await self.delete_course_use_case.execute(course_id)
 
     @course_router.post("/{course_id}/enrollments")
     async def enroll(self, course_id: UUID, request: EnrollRequest) -> IDResponse:
         """Enroll a user into a course (public endpoint)."""
-        cmd = EnrollUserCommand(
-            course_id=course_id,
-            email=request.email,
-            full_name=request.full_name,
-            phone=request.phone,
-            message=request.message,
-            user_id=None,
+        enrollment_id = await self.enroll_user_use_case.execute(
+            EnrollUserCommand(
+                course_id=course_id,
+                email=request.email,
+                full_name=request.full_name,
+                phone=request.phone,
+                message=request.message,
+                user_id=None,
+            )
         )
-        enrollment_id = await self.enroll_user_use_case.execute(cmd)
+        return IDResponse.from_uuid(enrollment_id)
+
+    @course_router.post("/{course_id}/enrollments/authenticated")
+    async def enroll_authenticated(
+        self,
+        course_id: UUID,
+        request: EnrollAuthenticatedRequest,
+        descriptor: Annotated[IdentityDescriptor, Depends(get_descriptor)],
+    ) -> IDResponse:
+        """Enroll a user into a course (public endpoint)."""
+        enrollment_id = await self.enroll_user_use_case.execute(
+            EnrollUserCommand(
+                course_id=course_id,
+                email=descriptor.username,
+                full_name=request.full_name,
+                phone=request.phone,
+                message=request.message,
+                user_id=descriptor.identity_id,
+            )
+        )
         return IDResponse.from_uuid(enrollment_id)
 
     @course_router.get("/{course_id}/enrollments")
@@ -237,24 +327,28 @@ class SkillController:
         return await self.get_skill_by_id_use_case.execute(query)
 
     @skills_router.post("/")
-    async def create_skill(self, command: CreateSkillCommand) -> IDResponse:
+    async def create_skill(self, request: CreateSkillRequest) -> IDResponse:
         """Create a new skill."""
+        command = CreateSkillCommand(
+            name=request.name,
+            description=request.description,
+        )
         skill_id = await self.create_skill_use_case.execute(command)
         return IDResponse.from_uuid(skill_id)
 
-    @skills_router.put("/{skill_id}")
-    async def update_skill(
-        self, skill_id: UUID, command: UpdateSkillCommand
-    ) -> IDResponse:
+    @skills_router.put("/{skill_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def update_skill(self, skill_id: UUID, request: UpdateSkillRequest) -> None:
         """Update an existing skill."""
-        command.skill_id = skill_id
-        updated_id = await self.update_skill_use_case.execute(command)
-        return IDResponse.from_uuid(updated_id)
+        command = UpdateSkillCommand(
+            skill_id=skill_id,
+            name=request.name,
+            description=request.description,
+        )
+        await self.update_skill_use_case.execute(command)
 
-    @skills_router.delete("/{skill_id}")
-    async def delete_skill(self, skill_id: UUID) -> IDResponse:
-        deleted_id = await self.delete_skill_use_case.execute(skill_id)
-        return IDResponse.from_uuid(deleted_id)
+    @skills_router.delete("/{skill_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def delete_skill(self, skill_id: UUID) -> None:
+        await self.delete_skill_use_case.execute(skill_id)
 
 
 @cbv(tags_router)
@@ -284,22 +378,21 @@ class TagController:
         return await self.get_tag_by_id_use_case.execute(query)
 
     @tags_router.post("/")
-    async def create_tag(self, command: CreateTagCommand) -> IDResponse:
+    async def create_tag(self, request: CreateTagRequest) -> IDResponse:
         """Create a new tag."""
+        command = CreateTagCommand(name=request.name)
         tag_id = await self.create_tag_use_case.execute(command)
         return IDResponse.from_uuid(tag_id)
 
-    @tags_router.put("/{tag_id}")
-    async def update_tag(self, tag_id: UUID, command: UpdateTagCommand) -> IDResponse:
+    @tags_router.put("/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def update_tag(self, tag_id: UUID, request: UpdateTagRequest) -> None:
         """Update an existing tag."""
-        command.tag_id = tag_id
-        updated_id = await self.update_tag_use_case.execute(command)
-        return IDResponse.from_uuid(updated_id)
+        command = UpdateTagCommand(tag_id=tag_id, name=request.name)
+        await self.update_tag_use_case.execute(command)
 
-    @tags_router.delete("/{tag_id}")
-    async def delete_tag(self, tag_id: UUID) -> IDResponse:
-        deleted_id = await self.delete_tag_use_case.execute(tag_id)
-        return IDResponse.from_uuid(deleted_id)
+    @tags_router.delete("/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def delete_tag(self, tag_id: UUID) -> None:
+        await self.delete_tag_use_case.execute(tag_id)
 
 
 @cbv(recommendations_router)

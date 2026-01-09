@@ -1,10 +1,10 @@
-"""DTO for UpdateSkill command."""
+"""Command DTO for UpdateSkill (application layer - frozen dataclass)."""
 
 from dataclasses import dataclass
 from uuid import UUID
 
 
-@dataclass
+@dataclass(frozen=True)
 class UpdateSkillCommand:
     skill_id: UUID
     name: str

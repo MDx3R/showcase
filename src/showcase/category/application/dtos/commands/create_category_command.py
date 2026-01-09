@@ -6,4 +6,4 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class CreateCategoryCommand:
     name: str
-    description: str | None = None
+    description: str | None

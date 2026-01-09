@@ -1,10 +1,10 @@
-"""DTO for UpdateCourse command."""
+"""Command DTO for UpdateCourse (application layer - frozen dataclass)."""
 
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
 from showcase.course.domain.value_objects import (
     CertificateType,
     CourseStatus,
@@ -13,16 +13,20 @@ from showcase.course.domain.value_objects import (
 from showcase.course.domain.value_objects.format import EducationFormat
 
 
-class UpdateCourseSectionDTO(BaseModel):
+@dataclass(frozen=True)
+class UpdateCourseSectionDTO:
     """DTO for updating a course section."""
 
     name: str
     description: str | None
-    order_num: int = Field(default=0, ge=0)
-    hours: int | None = Field(default=None, ge=1)
+    order_num: int
+    hours: int | None
 
 
-class UpdateCourseCommand(BaseModel):
+@dataclass(frozen=True)
+class UpdateCourseCommand:
+    """Command to update a course."""
+
     course_id: UUID
     name: str
     description: str | None
@@ -33,7 +37,7 @@ class UpdateCourseCommand(BaseModel):
 
     cost: Decimal
     discounted_cost: Decimal | None
-    duration_hours: int = Field(default=0, ge=0)
+    duration_hours: int
 
     start_date: datetime | None
     end_date: datetime | None
