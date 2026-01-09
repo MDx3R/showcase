@@ -38,7 +38,7 @@ class JWTTokenIssuer(ITokenIssuer):
 
         await self.refresh_token_repository.add(refresh)
 
-        return AuthTokens.create(identity_id, access.value, refresh.value)
+        return AuthTokens.create(access.value, refresh.value)
 
     def issue_access_token(self, identity_id: UUID) -> Token:
         issued_at = self.clock.now()
