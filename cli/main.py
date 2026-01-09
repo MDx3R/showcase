@@ -285,7 +285,7 @@ def main() -> FastAPI:
         model=config.llm.model,
         api_key=config.llm.api_key,
         api_base=config.llm.base_url,
-        temperature=0,
+        temperature=0.3,
     )
     MappedOpenAI.override(config.llm.model, config.llm.provider_model)
     logger.info("llm initialized")
