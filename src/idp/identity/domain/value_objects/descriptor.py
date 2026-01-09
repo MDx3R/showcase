@@ -7,5 +7,6 @@ from idp.identity.domain.entity.identity import Role
 @dataclass(frozen=True)
 class IdentityDescriptor:
     identity_id: UUID
+    email: str
     username: str
     role: Role
