@@ -24,6 +24,9 @@ from showcase.course.infrastructure.database.postgres.sqlalchemy.mappers import 
 from showcase.course.infrastructure.database.postgres.sqlalchemy.models import (
     CourseBase,
 )
+from showcase.course.infrastructure.database.postgres.sqlalchemy.models.tag import (
+    TagBase,
+)
 from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.orm import joinedload
 
@@ -187,9 +190,7 @@ class CourseReadRepository(ICourseReadRepository):
 
         # Tags
         if filter.tags:
-            stmt = stmt.join(CourseBase.tags).where(
-                CourseBase.tags.property.mapper.class_.name.in_(filter.tags)
-            )
+            stmt = stmt.join(CourseBase.tags).where(TagBase.name.in_(filter.tags))
 
         # Category ids
         if filter.category_ids:

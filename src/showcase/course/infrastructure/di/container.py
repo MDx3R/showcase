@@ -30,6 +30,9 @@ from showcase.course.application.usecases.get_courses_extended_usecase import (
 from showcase.course.application.usecases.query.list_enrollments_by_course_use_case import (
     ListEnrollmentsByCourseUseCase,
 )
+from showcase.course.application.usecases.query.list_enrollments_by_user_use_case import (
+    ListEnrollmentsByUserUseCase,
+)
 from showcase.course.infrastructure.database.postgres.sqlalchemy.repositories import (
     CourseReadRepository,
     CourseRepository,
@@ -85,6 +88,9 @@ class CourseContainer(containers.DeclarativeContainer):
 
     list_enrollments_use_case = providers.Factory(
         ListEnrollmentsByCourseUseCase, enrollment_repository
+    )
+    list_enrollments_by_user_use_case = providers.Factory(
+        ListEnrollmentsByUserUseCase, enrollment_repository
     )
 
     # Write use cases

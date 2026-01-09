@@ -97,6 +97,9 @@ from showcase.course.application.interfaces.usecases.query.get_courses_extended_
 from showcase.course.application.interfaces.usecases.query.list_enrollments_by_course_use_case import (
     IListEnrollmentsByCourseUseCase,
 )
+from showcase.course.application.interfaces.usecases.query.list_enrollments_by_user_use_case import (
+    IListEnrollmentsByUserUseCase,
+)
 from showcase.course.infrastructure.di.container import (
     CourseContainer,
     RecommendationContainer,
@@ -176,6 +179,9 @@ def init_course(app: FastAPI, container: CourseContainer) -> None:
     app.dependency_overrides[IEnrollUserUseCase] = lambda: container.enroll_use_case()
     app.dependency_overrides[IListEnrollmentsByCourseUseCase] = (
         lambda: container.list_enrollments_use_case()
+    )
+    app.dependency_overrides[IListEnrollmentsByUserUseCase] = (
+        lambda: container.list_enrollments_by_user_use_case()
     )
 
 

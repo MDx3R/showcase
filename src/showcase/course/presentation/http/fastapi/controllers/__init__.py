@@ -92,6 +92,9 @@ from showcase.course.application.interfaces.usecases.query import (
 from showcase.course.application.interfaces.usecases.query.list_enrollments_by_course_use_case import (
     IListEnrollmentsByCourseUseCase,
 )
+from showcase.course.application.interfaces.usecases.query.list_enrollments_by_user_use_case import (
+    IListEnrollmentsByUserUseCase,
+)
 from showcase.course.application.read_models.course_read_model import CourseReadModel
 from showcase.course.application.read_models.enrollment_read_model import (
     EnrollmentReadModel,
@@ -130,6 +133,7 @@ class CourseController:
     update_course_use_case: IUpdateCourseUseCase = Depends()
     get_courses_extended_use_case: IGetCoursesExtendedUseCase = Depends()
     delete_course_use_case: IDeleteCourseUseCase = Depends()
+    list_enrollments_by_user_use_case: IListEnrollmentsByUserUseCase = Depends()
 
     @course_router.get("/")
     async def list_courses(
@@ -297,6 +301,18 @@ class CourseController:
         """List enrollments for a course (admin use)."""
         return await self.list_enrollments_use_case.execute(
             course_id=course_id, skip=skip, limit=limit
+        )
+
+    @course_router.get("/enrollments/me")
+    async def list_my_enrollments(
+        self,
+        descriptor: Annotated[IdentityDescriptor, Depends(get_descriptor)],
+        skip: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+    ) -> Sequence[EnrollmentReadModel]:
+        """List enrollments for the authenticated user."""
+        return await self.list_enrollments_by_user_use_case.execute(
+            user_id=descriptor.identity_id, skip=skip, limit=limit
         )
 
 

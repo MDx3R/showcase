@@ -18,3 +18,9 @@ class IEnrollmentRepository(ABC):
         self, course_id: UUID, skip: int = 0, limit: int = 100
     ) -> Sequence[EnrollmentReadModel]:
         pass
+
+    @abstractmethod
+    async def list_by_user(
+        self, user_id: UUID, skip: int = 0, limit: int = 100
+    ) -> Sequence[EnrollmentReadModel]:
+        pass

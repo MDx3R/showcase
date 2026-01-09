@@ -31,3 +31,13 @@ class EnrollmentRepository(IEnrollmentRepository):
         )
         rows = await self.executor.execute_scalar_many(stmt)
         return [EnrollmentMapper.to_read_model(row) for row in rows]
+
+    async def list_by_user(self, user_id: UUID, skip: int = 0, limit: int = 100):
+        stmt = (
+            select(EnrollmentBase)
+            .where(EnrollmentBase.user_id == user_id)
+            .offset(skip)
+            .limit(limit)
+        )
+        rows = await self.executor.execute_scalar_many(stmt)
+        return [EnrollmentMapper.to_read_model(row) for row in rows]
