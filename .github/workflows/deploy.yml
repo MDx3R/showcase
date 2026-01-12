@@ -1,0 +1,173 @@
+name: Build, Push and Deploy Backend
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Image version"
+        required: false
+        default: "latest"
+
+env:
+  REGISTRY: ghcr.io
+  TAG_NAME: ${{ github.event.inputs.version || 'latest' }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set repository name to lowercase
+        run: echo "REPO_LOWER=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Check for changes in app
+        id: check_app
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep -qE "^(app/|src/|docker/Dockerfile|pyproject.toml)" && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for changes in migrations
+        id: check_migrations
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep -qE "^(alembic/|docker/Dockerfile.migrations)" && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and push App image
+      - name: Docker meta for App
+        id: meta_app
+        if: steps.check_app.outputs.changed == 'true'
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/app
+          tags: |
+            type=raw,value=${{ env.TAG_NAME }}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push App image
+        if: steps.check_app.outputs.changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: true
+          tags: ${{ steps.meta_app.outputs.tags }}
+          labels: ${{ steps.meta_app.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/app:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/app:buildcache,mode=max
+
+      # Build and push Migrations image
+      - name: Docker meta for Migrations
+        id: meta_migrations
+        if: steps.check_migrations.outputs.changed == 'true'
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/migrations
+          tags: |
+            type=raw,value=${{ env.TAG_NAME }}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push Migrations image
+        if: steps.check_migrations.outputs.changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile.migrations
+          push: true
+          tags: ${{ steps.meta_migrations.outputs.tags }}
+          labels: ${{ steps.meta_migrations.outputs.labels }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set repository name to lowercase
+        run: echo "REPO_LOWER=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          # Database
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASS=${{ secrets.DB_PASS }}
+          DB_NAME=${{ secrets.DB_NAME }}
+
+          # Stack configuration
+          DOMAIN=${{ secrets.DOMAIN }}
+          STACK_NAME=${{ secrets.STACK_NAME }}
+
+          GITHUB_REPOSITORY=${{ github.repository }}
+          DOCKER_TAG=${{ env.TAG_NAME }}
+          EOF
+
+      - name: Update docker-compose.yml with image paths
+        run: |
+          sed -i "s|ghcr\.io/\${GITHUB_REPOSITORY}/app:\${DOCKER_TAG}|${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/app:${{ env.TAG_NAME }}|g" docker-compose.prod.yml
+          sed -i "s|ghcr\.io/\${GITHUB_REPOSITORY}/migrations:\${DOCKER_TAG}|${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/migrations:${{ env.TAG_NAME }}|g" docker-compose.prod.yml
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Setup Docker authentication on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ~/.docker"
+
+          cat > docker_config.json << EOF
+          {
+            "auths": {
+              "${{ env.REGISTRY }}": {
+                "auth": "$(echo -n ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} | base64)"
+              }
+            }
+          }
+          EOF
+
+          scp -o StrictHostKeyChecking=no docker_config.json ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/.docker/config.json
+
+      - name: Deploy to server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ secrets.SSH_TARGET_DIR }}"
+
+          scp -o StrictHostKeyChecking=no docker-compose.prod.yml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_TARGET_DIR }}/
+          scp -o StrictHostKeyChecking=no .env ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_TARGET_DIR }}/
+
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            cd ${{ secrets.SSH_TARGET_DIR }} && \
+            docker-compose -f docker-compose.prod.yml pull && \
+            docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+          "
+
+      - name: Verify deployment
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            cd ${{ secrets.SSH_TARGET_DIR }} && \
+            docker-compose -f docker-compose.prod.yml ps
+          "
