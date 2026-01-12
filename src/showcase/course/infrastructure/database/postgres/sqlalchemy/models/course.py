@@ -172,7 +172,7 @@ class CourseLecturerBase(Base):
     __tablename__ = "course_lecturers"
 
     course_id: Mapped[UUID] = mapped_column(
-        ForeignKey("courses.course_id"), nullable=False, primary_key=True
+        ForeignKey("courses.course_id", ondelete="CASCADE"), nullable=False, primary_key=True
     )
     lecturer_id: Mapped[UUID] = mapped_column(
         ForeignKey("lecturers.lecturer_id"), nullable=False, primary_key=True
