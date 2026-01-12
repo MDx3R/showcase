@@ -358,6 +358,7 @@ def main() -> FastAPI:
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8081",
+        "https://cpe-courses.grebennikov.su"
     ],
     allow_credentials=True,
     allow_methods=["*"],
