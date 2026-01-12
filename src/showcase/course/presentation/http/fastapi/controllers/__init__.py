@@ -282,7 +282,7 @@ class CourseController:
         enrollment_id = await self.enroll_user_use_case.execute(
             EnrollUserCommand(
                 course_id=course_id,
-                email=descriptor.username,
+                email=descriptor.email,
                 full_name=request.full_name,
                 phone=request.phone,
                 message=request.message,
