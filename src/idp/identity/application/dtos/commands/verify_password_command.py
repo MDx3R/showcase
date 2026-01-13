@@ -3,5 +3,5 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class VerifyPasswordCommand:
-    username: str
+    email: str
     password: str

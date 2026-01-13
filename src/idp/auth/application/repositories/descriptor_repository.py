@@ -17,6 +17,7 @@ class IdentityDescriptorRepository(IIdentityDescriptorRepository):
         identity = await self.identity_repository.get_by_id(identity_id)
         return IdentityDescriptor(
             identity_id=identity.identity_id,
+            email=identity.email.value,
             username=identity.username.value,
             role=identity.role,
         )

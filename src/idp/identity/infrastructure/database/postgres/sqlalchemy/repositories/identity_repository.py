@@ -26,15 +26,15 @@ class IdentityRepository(IIdentityRepository):
             raise IdentityNotFoundError(identity_id)
         return IdentityMapper.to_domain(identity)
 
-    async def exists_by_username(self, username: str) -> bool:
-        stmt = select(exists().where(IdentityBase.username == username))
+    async def exists_by_email(self, email: str) -> bool:
+        stmt = select(exists().where(IdentityBase.email == email))
         return await self.executor.execute_scalar(stmt)
 
-    async def get_by_username(self, username: str) -> Identity:
-        stmt = select(IdentityBase).where(IdentityBase.username == username)
+    async def get_by_email(self, email: str) -> Identity:
+        stmt = select(IdentityBase).where(IdentityBase.email == email)
         identity = await self.executor.execute_scalar_one(stmt)
         if not identity:
-            raise IdentityNotFoundError(username)
+            raise IdentityNotFoundError(email)
         return IdentityMapper.to_domain(identity)
 
     async def add(self, entity: Identity) -> None:

@@ -168,7 +168,7 @@ class CourseController:
         )
 
     @course_router.get("/filter")
-    async def filter_extended(self, filter: CoursesFilter) -> list[CourseReadModel]:
+    async def filter_extended(self, filter: Annotated[CoursesFilter, Query()]) -> list[CourseReadModel]:
         """Filter endpoint for extended search."""
         return await self.get_courses_extended_use_case.execute(filter)
 
@@ -282,7 +282,7 @@ class CourseController:
         enrollment_id = await self.enroll_user_use_case.execute(
             EnrollUserCommand(
                 course_id=course_id,
-                email=descriptor.username,
+                email=descriptor.email,
                 full_name=request.full_name,
                 phone=request.phone,
                 message=request.message,

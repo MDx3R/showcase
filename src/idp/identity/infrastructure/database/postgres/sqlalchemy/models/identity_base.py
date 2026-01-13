@@ -11,6 +11,7 @@ class IdentityBase(Base):
     __tablename__ = "identities"
 
     identity_id: Mapped[UUID] = mapped_column(PGUUID, primary_key=True)
+    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     role: Mapped[Role] = mapped_column(Enum(Role), nullable=False)
-    username: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    username: Mapped[str] = mapped_column(String, nullable=False)
     password: Mapped[str] = mapped_column(String, nullable=False)

@@ -3,5 +3,5 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class LoginCommand:
-    username: str
+    email: str
     password: str

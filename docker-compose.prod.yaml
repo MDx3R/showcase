@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: ${STACK_NAME}-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend-internal
+
+  migrations:
+    image: ${REGISTRY}/${GITHUB_REPOSITORY}/migrations:${DOCKER_TAG}
+    container_name: ${STACK_NAME}-migrations
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      DB_PORT: 5432
+      DB_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["poetry", "run", "alembic", "upgrade", "head"]
+    networks:
+      - backend-internal
+
+  app:
+    image: ${REGISTRY}/${GITHUB_REPOSITORY}/app:${DOCKER_TAG}
+    container_name: ${STACK_NAME}-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_PORT: 5432
+      DB_HOST: postgres
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+      - traefik.http.services.${STACK_NAME}-app.loadbalancer.server.port=8000
+      - traefik.http.routers.${STACK_NAME}-app-http.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.${STACK_NAME}-app-http.entrypoints=http
+      - traefik.http.routers.${STACK_NAME}-app-http.middlewares=https-redirect
+      - traefik.http.routers.${STACK_NAME}-app-https.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.${STACK_NAME}-app-https.entrypoints=https
+      - traefik.http.routers.${STACK_NAME}-app-https.tls=true
+      - traefik.http.routers.${STACK_NAME}-app-https.tls.certresolver=le
+    networks:
+      - traefik-public
+      - backend-internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
+
+networks:
+  traefik-public:
+    external: true
+  backend-internal:
+    driver: bridge
