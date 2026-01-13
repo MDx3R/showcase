@@ -120,6 +120,8 @@ jobs:
           DB_PASS=${{ secrets.DB_PASS }}
           DB_NAME=${{ secrets.DB_NAME }}
 
+          API_KEY=${{ secrets.API_KEY }}
+
           DOMAIN=${{ secrets.DOMAIN }}
           STACK_NAME=${{ secrets.STACK_NAME }}
 
