@@ -125,23 +125,17 @@ jobs:
       - name: Create .env file
         run: |
           cat > .env << EOF
-          # Database
           DB_USER=${{ secrets.DB_USER }}
           DB_PASS=${{ secrets.DB_PASS }}
           DB_NAME=${{ secrets.DB_NAME }}
 
-          # Stack configuration
           DOMAIN=${{ secrets.DOMAIN }}
           STACK_NAME=${{ secrets.STACK_NAME }}
 
-          GITHUB_REPOSITORY=${{ github.repository }}
+          REGISTRY=${{ env.REGISTRY }}
+          GITHUB_REPOSITORY=${{ env.REPO_LOWER }}
           DOCKER_TAG=${{ env.TAG_NAME }}
           EOF
-
-      - name: Update docker-compose.yaml with image paths
-        run: |
-          sed -i "s|ghcr\.io/\${GITHUB_REPOSITORY}/app:\${DOCKER_TAG}|${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/app:${{ env.TAG_NAME }}|g" docker-compose.prod.yaml
-          sed -i "s|ghcr\.io/\${GITHUB_REPOSITORY}/migrations:\${DOCKER_TAG}|${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/migrations:${{ env.TAG_NAME }}|g" docker-compose.prod.yaml
 
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.9.0
