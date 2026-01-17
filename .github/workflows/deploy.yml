@@ -48,7 +48,7 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
-            git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep -qE "^(alembic/|docker/Dockerfile.migrations)" && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+            git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep -qE "^(alembic/|migrations/|docker/Dockerfile.migrations)" && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Log in to the Container registry
@@ -119,6 +119,10 @@ jobs:
           DB_NAME=${{ secrets.DB_NAME }}
 
           API_KEY=${{ secrets.API_KEY }}
+          PROVIDER_MODEL=${{ secrets.PROVIDER_MODEL }}
+
+          TELEGRAM__TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM__ENABLED=True
 
           PGADMIN_DEFAULT_EMAIL=${{ secrets.PGADMIN_DEFAULT_EMAIL }}
           PGADMIN_DEFAULT_PASSWORD=${{ secrets.PGADMIN_DEFAULT_PASSWORD }}

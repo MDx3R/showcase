@@ -18,6 +18,7 @@ class GetCoursesUseCase(IGetCoursesUseCase):
             status=query.status,
             is_published=query.is_published,
             category_id=query.category_id,
+            format=query.format,
             skip=query.skip,
             limit=query.limit,
         )

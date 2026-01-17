@@ -183,6 +183,24 @@ services:
       migrations:
         condition: service_completed_successfully
 
+  telegram_bot:
+    image: ${REGISTRY}/${GITHUB_REPOSITORY}/app:${DOCKER_TAG}
+    container_name: ${STACK_NAME}-telegram-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_PORT: 5432
+      DB_HOST: postgres
+    command: ["poetry", "run", "python", "cli/telegram_bot.py"]
+    networks:
+      - backend-internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
 volumes:
   postgres_data:
   pgadmin_data:

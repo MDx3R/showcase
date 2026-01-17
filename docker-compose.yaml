@@ -43,6 +43,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
     env_file:
       - .env
     # NOTE: environment overrides env_file with proper DB_PORT and DB_HOST
@@ -50,6 +52,26 @@ services:
     environment:
       DB_PORT: 5432
       DB_HOST: postgres
+    restart: unless-stopped
+
+  telegram_bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    # NOTE: environment overrides env_file with proper DB_PORT and DB_HOST
+    # regardless of launch env (i.e. local, dev or prod and etc.)
+    environment:
+      DB_PORT: 5432
+      DB_HOST: postgres
+    command: ["poetry", "run", "python", "cli/telegram_bot.py"]
+    restart: unless-stopped
 
 volumes:
   postgres_data:
