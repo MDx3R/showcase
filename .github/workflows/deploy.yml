@@ -39,7 +39,7 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
-            git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep -qE "^(app/|src/|docker/Dockerfile|pyproject.toml)" && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+            git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep -qE "^(cli/|src/|docker/Dockerfile|pyproject.toml)" && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Check for changes in migrations
