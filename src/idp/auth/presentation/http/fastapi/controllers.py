@@ -38,7 +38,11 @@ class AuthController:
     logout_use_case: ILogoutUseCase = Depends()
     refresh_token_use_case: IRefreshTokenUseCase = Depends()
 
-    @auth_router.post("/login", dependencies=[Depends(require_unauthenticated)], summary="Login with email (use email as username)")
+    @auth_router.post(
+        "/login",
+        dependencies=[Depends(require_unauthenticated)],
+        summary="Login with email (use email as username)",
+    )
     async def login(
         self,
         username: Annotated[str, Form()],
@@ -50,22 +54,12 @@ class AuthController:
                 LoginCommand(email=email, password=password)
             )
             return AuthTokensResponse(**asdict(result))
-        except InvalidEmailError as exc:
+        except (InvalidPasswordError, InvalidEmailError) as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
-                    "error": "InvalidEmailError",
-                    "email": exc.email,
-                    "message": str(exc),
-                },
-            ) from exc
-        except InvalidPasswordError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "InvalidPasswordError",
-                    "user_id": str(exc.identity_id),
-                    "message": str(exc),
+                    "error": "InvalidEmailOrPasswordError",
+                    "message": "Invalid email or password",
                 },
             ) from exc
 
