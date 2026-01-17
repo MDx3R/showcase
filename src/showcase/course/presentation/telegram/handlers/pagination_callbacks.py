@@ -3,7 +3,6 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
-
 from showcase.course.presentation.telegram.services.course_list_service import (
     CourseListService,
 )

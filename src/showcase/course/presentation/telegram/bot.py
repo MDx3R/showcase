@@ -4,7 +4,9 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
-
+from showcase.category.application.interfaces.usecases.query.get_categories_usecase import (
+    IGetCategoriesUseCase,
+)
 from showcase.course.application.interfaces.services.recommendation_service import (
     IRecommendationService,
 )
@@ -15,18 +17,15 @@ from showcase.course.application.interfaces.usecases.query.get_course_by_id_usec
 from showcase.course.application.interfaces.usecases.query.get_courses_search_usecase import (
     IGetCoursesSearchUseCase,
 )
-from showcase.category.application.interfaces.usecases.query.get_categories_usecase import (
-    IGetCategoriesUseCase,
-)
 from showcase.course.presentation.telegram.handlers.commands import CommandHandler
-from showcase.course.presentation.telegram.handlers.menu_callbacks import (
-    MenuCallbackHandler,
-)
 from showcase.course.presentation.telegram.handlers.course_callbacks import (
     CourseCallbackHandler,
 )
 from showcase.course.presentation.telegram.handlers.filter_callbacks import (
     FilterCallbackHandler,
+)
+from showcase.course.presentation.telegram.handlers.menu_callbacks import (
+    MenuCallbackHandler,
 )
 from showcase.course.presentation.telegram.handlers.pagination_callbacks import (
     PaginationCallbackHandler,
@@ -55,6 +54,7 @@ def create_bot(
 
     Returns:
         Configured Bot instance
+
     """
     bot = Bot(
         token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
@@ -81,6 +81,7 @@ def create_dispatcher(
 
     Returns:
         Configured Dispatcher instance
+
     """
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage)
@@ -139,5 +140,6 @@ async def start_polling(
     Args:
         bot: Telegram bot instance
         dispatcher: Bot dispatcher instance
+
     """
     await dispatcher.start_polling(bot)

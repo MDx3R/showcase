@@ -3,7 +3,6 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
-
 from showcase.course.presentation.telegram.keyboards.builder import (
     build_filter_keyboard,
     build_main_menu_keyboard,

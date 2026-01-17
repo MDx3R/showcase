@@ -1,13 +1,11 @@
 """Keyboard builders for Telegram bot."""
 
-from typing import Sequence
+from collections.abc import Sequence
 from uuid import UUID
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-
 from showcase.course.application.read_models.course_read_model import CourseReadModel
-from showcase.course.domain.value_objects import Format
 
 
 def build_main_menu_keyboard() -> InlineKeyboardMarkup:

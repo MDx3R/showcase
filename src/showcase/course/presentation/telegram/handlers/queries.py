@@ -3,7 +3,6 @@
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-
 from showcase.course.application.dtos.queries import GetCoursesSearchQuery
 from showcase.course.application.interfaces.services.recommendation_service import (
     GetRecommendationsDTO,

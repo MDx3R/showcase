@@ -1,11 +1,9 @@
 """Service for handling course list display and pagination."""
 
-from typing import Optional
 from uuid import UUID
 
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-
 from showcase.course.application.dtos.queries import GetCoursesQuery
 from showcase.course.application.interfaces.usecases.query import IGetCoursesUseCase
 from showcase.course.domain.value_objects import CourseStatus, Format
@@ -14,6 +12,7 @@ from showcase.course.presentation.telegram.keyboards.builder import (
     build_course_list_keyboard,
     build_main_menu_keyboard,
 )
+
 
 PAGE_SIZE = 5  # Constant for pagination
 

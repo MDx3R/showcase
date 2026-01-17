@@ -80,6 +80,7 @@ select = [
   "FAST003",
 ]
 ignore = [
+    "RUF001",
     "D203", 
     "D213", 
     "E501", 

@@ -1,9 +1,7 @@
 """Filter state for course filtering."""
 
-from aiogram.fsm.state import State, StatesGroup
-from uuid import UUID
 
-from showcase.course.domain.value_objects import CourseStatus, Format
+from aiogram.fsm.state import State, StatesGroup
 
 
 class FilterState(StatesGroup):

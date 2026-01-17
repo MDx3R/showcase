@@ -3,9 +3,7 @@
 from uuid import UUID
 
 from aiogram import F, Router
-from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
-
 from showcase.course.application.dtos.queries import GetCourseByIdQuery
 from showcase.course.application.interfaces.usecases.query.get_course_by_id_usecase import (
     IGetCourseByIdUseCase,

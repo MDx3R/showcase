@@ -26,7 +26,7 @@ def format_course_list(courses: list[CourseReadModel], page: int = 1) -> str:
 
     text = f"📚 <b>Найдено курсов: {len(courses)}</b>\n\n"
 
-    for idx, course in enumerate(courses, start=1):
+    for idx, course in enumerate[CourseReadModel](courses, start=1):
         text += format_course_short(course, index=idx)
         text += "\n\n"
 

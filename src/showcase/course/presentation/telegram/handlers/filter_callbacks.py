@@ -5,7 +5,6 @@ from uuid import UUID
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
-
 from showcase.category.application.dtos.queries import GetCategoriesQuery
 from showcase.category.application.interfaces.usecases.query.get_categories_usecase import (
     IGetCategoriesUseCase,
