@@ -16,13 +16,12 @@ from showcase.course.infrastructure.database.postgres.sqlalchemy.models.course i
     CourseSkillBase,
     CourseTagBase,
 )
-from sqlalchemy import delete, func, literal_column, select, update
-from sqlalchemy.dialects.postgresql import TSVECTOR
-from sqlalchemy.orm import joinedload
-
 from showcase.course.infrastructure.database.postgres.sqlalchemy.models.skill import (
     SkillBase,
 )
+from sqlalchemy import delete, func, literal_column, select, update
+from sqlalchemy.dialects.postgresql import TSVECTOR
+from sqlalchemy.orm import joinedload
 
 
 class CourseRepository(ICourseRepository):

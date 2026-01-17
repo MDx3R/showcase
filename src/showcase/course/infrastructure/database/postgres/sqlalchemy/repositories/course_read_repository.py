@@ -28,7 +28,7 @@ from showcase.course.infrastructure.database.postgres.sqlalchemy.models.tag impo
     TagBase,
 )
 from sqlalchemy import ColumnElement, func, select
-from sqlalchemy.orm import contains_eager, joinedload
+from sqlalchemy.orm import joinedload
 
 
 class CourseReadRepository(ICourseReadRepository):
