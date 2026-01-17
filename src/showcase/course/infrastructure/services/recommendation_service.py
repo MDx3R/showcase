@@ -16,6 +16,9 @@ from showcase.course.application.interfaces.services.recommendation_service impo
     IRecommendationService,
     RecommendationsDTO,
 )
+from showcase.course.application.read_models.course_read_model import (
+    CourseRankingReadModel,
+)
 from showcase.course.domain.value_objects.format import Format
 
 
@@ -222,7 +225,11 @@ class RecommendationService(IRecommendationService):
 
         ranking_llm = self.llm.as_structured_llm(CourseRankingLLM)
 
-        courses_json = [c.model_dump(mode="json") for c in courses]
+        # Convert to optimized ranking model to reduce token usage
+        ranking_courses = [
+            CourseRankingReadModel.from_course_read_model(c) for c in courses
+        ]
+        courses_json = [c.model_dump(mode="json") for c in ranking_courses]
 
         self.logger.info(
             "Sending ranking request to LLM",
