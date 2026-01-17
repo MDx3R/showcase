@@ -132,6 +132,7 @@ jobs:
 
           DOMAIN=${{ secrets.DOMAIN }}
           STACK_NAME=${{ secrets.STACK_NAME }}
+          EXTERNAL_URL=${{ secrets.EXTERNAL_URL }}
 
           REGISTRY=${{ env.REGISTRY }}
           GITHUB_REPOSITORY=${{ env.REPO_LOWER }}
