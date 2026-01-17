@@ -5,6 +5,29 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
+STANDARD_ATTRS = {
+    "name",
+    "msg",
+    "args",
+    "levelname",
+    "levelno",
+    "pathname",
+    "filename",
+    "module",
+    "exc_info",
+    "exc_text",
+    "stack_info",
+    "lineno",
+    "funcName",
+    "created",
+    "msecs",
+    "relativeCreated",
+    "thread",
+    "threadName",
+    "processName",
+    "process",
+}
+
 
 class JSONFormatter(logging.Formatter):
     """Format log records as JSON."""
@@ -36,8 +59,12 @@ class JSONFormatter(logging.Formatter):
             "line": record.lineno,
         }
 
-        if extra := getattr(record, "extra", None):
-            log_record.update(extra)
+        for key, value in record.__dict__.items():
+            if key not in STANDARD_ATTRS:
+                log_record[key] = value
+
+        # if extra := getattr(record, "extra", None):
+        #     log_record.update(extra)
 
         if record.exc_info:
             log_record["exception"] = self.formatException(record.exc_info)

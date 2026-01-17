@@ -15,6 +15,7 @@ class CommonContainer(containers.DeclarativeContainer):
     """Shared infrastructure dependencies for all bounded contexts."""
 
     config: providers.Dependency[Any] = providers.Dependency()
+    logger: providers.Dependency[Any] = providers.Dependency()
     database: providers.Dependency[Any] = providers.Dependency()
 
     clock = providers.Singleton(SystemClock)

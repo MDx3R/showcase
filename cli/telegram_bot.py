@@ -55,7 +55,7 @@ def main() -> None:
     logger.info("llm initialized")
 
     # Bootstrap common container with config and database
-    common_container = CommonContainer(config=config, database=database)
+    common_container = CommonContainer(config=config, database=database, logger=logger)
 
     query_executor = common_container.query_executor
 
@@ -72,6 +72,7 @@ def main() -> None:
     )
 
     recommendation_container = RecommendationContainer(
+        logger=logger,
         llm=llm,
         course_read_repository=course_container.course_read_repository,
         category_read_repository=category_container.category_read_repository,

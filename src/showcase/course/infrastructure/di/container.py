@@ -129,6 +129,7 @@ class RecommendationContainer(containers.DeclarativeContainer):
     """Dependency injection container for course recommendations."""
 
     # Explicit dependency declarations
+    logger: providers.Dependency[Any] = providers.Dependency()
     llm: providers.Dependency[Any] = providers.Dependency()
     course_read_repository: providers.Dependency[Any] = providers.Dependency()
     category_read_repository: providers.Dependency[Any] = providers.Dependency()
@@ -136,6 +137,7 @@ class RecommendationContainer(containers.DeclarativeContainer):
     # Services
     recommendation_service = providers.Factory(
         RecommendationService,
+        logger=logger,
         llm=llm,
         course_repository=course_read_repository,
         category_repository=category_read_repository,
