@@ -87,7 +87,7 @@ class CommandHandler:
     async def _handle_search(self, message: Message) -> None:
         """Handle /search command."""
         # Extract search query from command
-        parts = message.text.split(maxsplit=1)
+        parts = (message.text or "").split(maxsplit=1)
         if len(parts) < 2:
             await message.answer(
                 "❌ Укажите запрос для поиска.\nПример: /search Python"

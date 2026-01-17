@@ -3,7 +3,6 @@
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-
 from showcase.course.application.dtos.queries import GetCoursesSearchQuery
 from showcase.course.application.interfaces.services.recommendation_service import (
     GetRecommendationsDTO,
@@ -50,6 +49,9 @@ class QueryHandler:
 
     async def _handle_search_query(self, message: Message, state: FSMContext) -> None:
         """Handle search query input."""
+        if not message.text:
+            await message.answer("❌ Запрос не может быть пустым.")
+            return
         query_text = message.text.strip()
 
         if not query_text:
@@ -89,6 +91,9 @@ class QueryHandler:
         self, message: Message, state: FSMContext
     ) -> None:
         """Handle recommendation query input."""
+        if not message.text:
+            await message.answer("❌ Запрос не может быть пустым.")
+            return
         query_text = message.text.strip()
 
         if not query_text:

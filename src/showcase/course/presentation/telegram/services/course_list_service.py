@@ -1,11 +1,9 @@
 """Service for handling course list display and pagination."""
 
-from typing import Optional
 from uuid import UUID
 
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-
 from showcase.course.application.dtos.queries import GetCoursesQuery
 from showcase.course.application.interfaces.usecases.query import IGetCoursesUseCase
 from showcase.course.domain.value_objects import CourseStatus, Format
@@ -14,6 +12,7 @@ from showcase.course.presentation.telegram.keyboards.builder import (
     build_course_list_keyboard,
     build_main_menu_keyboard,
 )
+
 
 PAGE_SIZE = 5  # Constant for pagination
 
@@ -97,7 +96,8 @@ class CourseListService:
     ) -> None:
         """Send or edit message based on input type."""
         if isinstance(callback_or_message, CallbackQuery):
-            await callback_or_message.message.edit_text(text, reply_markup=keyboard)
+            if callback_or_message.message:
+                await callback_or_message.message.edit_text(text, reply_markup=keyboard)  # pyright: ignore[reportAttributeAccessIssue]
             await callback_or_message.answer()
         else:
             await callback_or_message.answer(text, reply_markup=keyboard)

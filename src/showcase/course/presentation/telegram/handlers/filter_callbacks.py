@@ -5,7 +5,6 @@ from uuid import UUID
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
-
 from showcase.category.application.dtos.queries import GetCategoriesQuery
 from showcase.category.application.interfaces.usecases.query.get_categories_usecase import (
     IGetCategoriesUseCase,
@@ -58,13 +57,15 @@ class FilterCallbackHandler:
     async def _handle_filter_format(self, callback: CallbackQuery) -> None:
         text = "📍 Выберите формат обучения:"
         keyboard = build_format_filter_keyboard()
-        await callback.message.edit_text(text, reply_markup=keyboard)
+        if callback.message:
+            await callback.message.edit_text(text, reply_markup=keyboard)  # pyright: ignore[reportAttributeAccessIssue]
         await callback.answer()
 
     async def _handle_filter_status(self, callback: CallbackQuery) -> None:
         text = "📊 Выберите статус курса:"
         keyboard = build_status_filter_keyboard()
-        await callback.message.edit_text(text, reply_markup=keyboard)
+        if callback.message:
+            await callback.message.edit_text(text, reply_markup=keyboard)  # pyright: ignore[reportAttributeAccessIssue]
         await callback.answer()
 
     async def _handle_filter_category(self, callback: CallbackQuery) -> None:
@@ -77,12 +78,16 @@ class FilterCallbackHandler:
 
         text = "🏷 <b>Выберите категорию:</b>"
         keyboard = build_category_filter_keyboard(categories)
-        await callback.message.edit_text(text, reply_markup=keyboard)
+        if callback.message:
+            await callback.message.edit_text(text, reply_markup=keyboard)  # pyright: ignore[reportAttributeAccessIssue]
         await callback.answer()
 
     async def _handle_filter_format_select(
         self, callback: CallbackQuery, state: FSMContext
     ) -> None:
+        if not callback.data:
+            await callback.answer("❌ Неверный формат.", show_alert=True)
+            return
         format_str = callback.data.split("_", 2)[2]
         if format_str == "none":
             await state.update_data(format=None)
@@ -108,6 +113,9 @@ class FilterCallbackHandler:
     async def _handle_filter_status_select(
         self, callback: CallbackQuery, state: FSMContext
     ) -> None:
+        if not callback.data:
+            await callback.answer("❌ Неверный статус.", show_alert=True)
+            return
         status_str = callback.data.split("_", 2)[2]
         if status_str == "none":
             await state.update_data(status=None)
@@ -133,6 +141,9 @@ class FilterCallbackHandler:
     async def _handle_filter_category_select(
         self, callback: CallbackQuery, state: FSMContext
     ) -> None:
+        if not callback.data:
+            await callback.answer("❌ Неверная категория.", show_alert=True)
+            return
         category_str = callback.data.split("_", 2)[2]
         if category_str == "none":
             await state.update_data(category_id=None)

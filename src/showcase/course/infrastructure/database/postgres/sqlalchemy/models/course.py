@@ -57,9 +57,9 @@ class CourseBase(Base):
         Enum(EducationFormat), nullable=False
     )
     duration_hours: Mapped[int] = mapped_column(Integer, nullable=False)
-    cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    cost: Mapped[Decimal] = mapped_column(Numeric[Decimal](10, 2), nullable=False)
     discounted_cost: Mapped[Decimal | None] = mapped_column(
-        Numeric(10, 2), nullable=True
+        Numeric[Decimal](10, 2), nullable=True
     )
     start_date: Mapped[datetime | None] = mapped_column(
         SQLDateTime(timezone=True), nullable=True
@@ -75,7 +75,7 @@ class CourseBase(Base):
     )
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
     locations: Mapped[list[str]] = mapped_column(
-        ARRAY(String(255)), nullable=False, server_default=text("'{}'")
+        ARRAY[str](String(255)), nullable=False, server_default=text("'{}'")
     )
 
     search_vector: Mapped[str] = mapped_column(
@@ -172,7 +172,9 @@ class CourseLecturerBase(Base):
     __tablename__ = "course_lecturers"
 
     course_id: Mapped[UUID] = mapped_column(
-        ForeignKey("courses.course_id", ondelete="CASCADE"), nullable=False, primary_key=True
+        ForeignKey("courses.course_id", ondelete="CASCADE"),
+        nullable=False,
+        primary_key=True,
     )
     lecturer_id: Mapped[UUID] = mapped_column(
         ForeignKey("lecturers.lecturer_id"), nullable=False, primary_key=True

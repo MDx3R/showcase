@@ -25,8 +25,8 @@ class CourseSortOrder(str, Enum):
 class SimpleCoursesFilter(BaseModel):
     """Simplified filter to get all courses with optional filters."""
 
-    status: CourseStatus = CourseStatus.ACTIVE
     is_published: bool = True
+    status: CourseStatus | None = None
 
     categories: list[str] | None = None
     format: Format | None = None
