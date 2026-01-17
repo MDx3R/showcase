@@ -8,9 +8,9 @@ from idp.identity.application.dtos.commands.verify_password_command import (
     VerifyPasswordCommand,
 )
 from idp.identity.application.exceptions import (
+    EmailAlreadyTakenError,
+    InvalidEmailError,
     InvalidPasswordError,
-    InvalidUsernameError,
-    UsernameAlreadyTakenError,
 )
 from idp.identity.application.interfaces.repositories.identity_repository import (
     IIdentityRepository,
@@ -36,31 +36,31 @@ class IdentityService(IIdentityService):
         self.identity_factory = identity_factory
         self.password_hasher = password_hasher
 
-    async def exists_by_username(self, username: str) -> bool:
-        return await self.identity_repository.exists_by_username(username)
+    async def exists_by_email(self, email: str) -> bool:
+        return await self.identity_repository.exists_by_email(email)
 
-    async def get_by_username(self, username: str) -> Identity:
-        return await self.identity_repository.get_by_username(username)
+    async def get_by_email(self, email: str) -> Identity:
+        return await self.identity_repository.get_by_email(email)
 
     async def create_identity(self, command: CreateIdentityCommand) -> UUID:
-        if await self.exists_by_username(command.username):
-            raise UsernameAlreadyTakenError(command.username)
+        if await self.exists_by_email(command.email):
+            raise EmailAlreadyTakenError(command.email)
 
         password_hash = self.password_hasher.hash(command.password)
-        identity = self.identity_factory.create(command.username, password_hash)
+        identity = self.identity_factory.create(command.email, command.username, password_hash)
 
         try:
             await self.identity_repository.add(identity)
         except DuplicateEntryError as exc:
-            raise UsernameAlreadyTakenError(command.username) from exc
+            raise EmailAlreadyTakenError(command.email) from exc
 
         return identity.identity_id
 
     async def verify_password(self, command: VerifyPasswordCommand) -> UUID:
-        if not await self.exists_by_username(command.username):
-            raise InvalidUsernameError(command.username)
+        if not await self.exists_by_email(command.email):
+            raise InvalidEmailError(command.email)
 
-        identity = await self.get_by_username(command.username)
+        identity = await self.get_by_email(command.email)
         if not self.password_hasher.verify(command.password, identity.password.value):
             raise InvalidPasswordError(identity.identity_id)
 

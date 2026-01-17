@@ -1,5 +1,4 @@
 """Application entry point."""
-
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -11,6 +10,7 @@ from common.infrastructure.logger.logging.logger_factory import LoggerFactory
 from common.infrastructure.services.llama_index.client import MappedOpenAI
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
 from idp.auth.application.interfaces.usecases.command.login_use_case import (
     ILoginUseCase,
 )
@@ -353,6 +353,17 @@ def main() -> FastAPI:
     init_auth(server, auth_container)
     init_token(server, token_container)
     init_recommendations(server, recommendation_container)
+
+    server.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8081",
+        "https://cpe-courses.grebennikov.su"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
     # Create and configure app
     return server

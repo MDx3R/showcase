@@ -23,6 +23,6 @@ class LoginUseCase(ILoginUseCase):
 
     async def execute(self, command: LoginCommand) -> AuthTokens:
         identity_id = await self.identity_service.verify_password(
-            VerifyPasswordCommand(command.username, command.password)
+            VerifyPasswordCommand(command.email, command.password)
         )
         return await self.token_issuer.issue_tokens(identity_id)

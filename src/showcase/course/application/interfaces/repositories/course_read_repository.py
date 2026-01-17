@@ -41,8 +41,8 @@ class CoursesFilter(BaseModel):
     """Filter to get all courses with optional filters."""
 
     # base filters
-    is_published: bool = True
-    status: CourseStatus = CourseStatus.ACTIVE
+    is_published: bool | None = None
+    status: CourseStatus | None = None
 
     # text search
     search: str | None = None
@@ -64,7 +64,7 @@ class CoursesFilter(BaseModel):
 
     # flags
     has_discount: bool | None = None
-    is_upcoming: bool = True
+    is_upcoming: bool | None = None
 
     # sorting
     sort_field: CourseSortField = CourseSortField.NONE

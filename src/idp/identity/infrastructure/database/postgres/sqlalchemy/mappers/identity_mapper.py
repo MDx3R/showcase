@@ -1,4 +1,5 @@
 from idp.identity.domain.entity.identity import Identity
+from idp.identity.domain.value_objects.email import Email
 from idp.identity.domain.value_objects.password import Password
 from idp.identity.domain.value_objects.username import Username
 from idp.identity.infrastructure.database.postgres.sqlalchemy.models.identity_base import (
@@ -11,6 +12,7 @@ class IdentityMapper:
     def to_domain(cls, base: IdentityBase) -> Identity:
         return Identity(
             identity_id=base.identity_id,
+            email=Email(base.email),
             role=base.role,
             username=Username(base.username),
             password=Password(base.password),
@@ -20,6 +22,7 @@ class IdentityMapper:
     def to_persistence(cls, user: Identity) -> IdentityBase:
         return IdentityBase(
             identity_id=user.identity_id,
+            email=user.email.value,
             role=user.role,
             username=user.username.value,
             password=user.password.value,

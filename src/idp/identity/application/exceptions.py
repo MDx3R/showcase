@@ -7,10 +7,10 @@ class IdentityNotFoundError(NotFoundError):
     pass
 
 
-class UsernameAlreadyTakenError(ApplicationError):
-    def __init__(self, username: str):
-        super().__init__(f"Username '{username}' is already taken by another user.")
-        self.username = username
+class EmailAlreadyTakenError(ApplicationError):
+    def __init__(self, email: str):
+        super().__init__(f"Email '{email}' is already taken by another user.")
+        self.email = email
 
 
 class InvalidPasswordError(ApplicationError):
@@ -19,10 +19,10 @@ class InvalidPasswordError(ApplicationError):
         self.identity_id = identity_id
 
 
-class InvalidUsernameError(ApplicationError):
-    def __init__(self, username: str) -> None:
-        super().__init__(f"Invalid username: {username}")
-        self.username = username
+class InvalidEmailError(ApplicationError):
+    def __init__(self, email: str) -> None:
+        super().__init__(f"Invalid email: {email}")
+        self.email = email
 
 
 class TokenExpiredError(ApplicationError):

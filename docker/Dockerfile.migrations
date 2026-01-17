@@ -11,3 +11,6 @@ COPY migrations ./migrations
 COPY alembic.ini .
 COPY configs ./configs
 COPY src ./src
+
+ENV PYTHONPATH=/app/src
+ENV CONFIG_PATH=configs/example.yaml

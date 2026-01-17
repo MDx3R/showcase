@@ -19,8 +19,8 @@ from idp.auth.application.interfaces.usecases.command.refresh_token_use_case imp
 )
 from idp.auth.presentation.http.dto.response import AuthTokensResponse
 from idp.identity.application.exceptions import (
+    InvalidEmailError,
     InvalidPasswordError,
-    InvalidUsernameError,
 )
 from idp.identity.presentation.http.fastapi.auth import (
     get_token,
@@ -38,23 +38,24 @@ class AuthController:
     logout_use_case: ILogoutUseCase = Depends()
     refresh_token_use_case: IRefreshTokenUseCase = Depends()
 
-    @auth_router.post("/login", dependencies=[Depends(require_unauthenticated)])
+    @auth_router.post("/login", dependencies=[Depends(require_unauthenticated)], summary="Login with email (use email as username)")
     async def login(
         self,
         username: Annotated[str, Form()],
         password: Annotated[str, Form()],
     ) -> AuthTokensResponse:
         try:
+            email = username
             result = await self.login_use_case.execute(
-                LoginCommand(username=username, password=password)
+                LoginCommand(email=email, password=password)
             )
             return AuthTokensResponse(**asdict(result))
-        except InvalidUsernameError as exc:
+        except InvalidEmailError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
-                    "error": "InvalidUsernameError",
-                    "username": exc.username,
+                    "error": "InvalidEmailError",
+                    "email": exc.email,
                     "message": str(exc),
                 },
             ) from exc
