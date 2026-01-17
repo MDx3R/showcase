@@ -4,6 +4,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
+from common.infrastructure.config.deployment_meta import DeploymentMeta
 from showcase.category.application.interfaces.usecases.query.get_categories_usecase import (
     IGetCategoriesUseCase,
 )
@@ -56,14 +57,13 @@ def create_bot(
         Configured Bot instance
 
     """
-    bot = Bot(
-        token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-    )
+    bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
     return bot
 
 
 def create_dispatcher(
+    deploy_meta: DeploymentMeta,
     get_courses_use_case: IGetCoursesUseCase,
     get_course_by_id_use_case: IGetCourseByIdUseCase,
     get_courses_search_use_case: IGetCoursesSearchUseCase,
@@ -91,6 +91,7 @@ def create_dispatcher(
 
     # Initialize handlers
     command_handler = CommandHandler(
+        deploy_meta=deploy_meta,
         get_courses_use_case=get_courses_use_case,
         get_course_by_id_use_case=get_course_by_id_use_case,
         get_courses_search_use_case=get_courses_search_use_case,

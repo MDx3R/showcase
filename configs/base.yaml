@@ -31,3 +31,7 @@ llm:
 telegram:
   token: ""
   enabled: false
+
+deploy:
+  external_url: "https://example.com"
+  telegram_bot_username: "example_bot"

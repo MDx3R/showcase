@@ -48,6 +48,8 @@ def build_course_list_keyboard(
             callback_data=f"course_{course.course_id}",
         )
 
+    builder.adjust(3)
+
     # Pagination buttons
     pagination_row = []
     if page > 1:
