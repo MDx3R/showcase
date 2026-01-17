@@ -4,6 +4,7 @@ from aiogram import Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+from common.infrastructure.config.deployment_meta import DeploymentMeta
 from showcase.course.application.dtos.queries import GetCoursesSearchQuery
 from showcase.course.application.interfaces.usecases.query import (
     IGetCoursesUseCase,
@@ -29,11 +30,13 @@ class CommandHandler:
 
     def __init__(
         self,
+        deploy_meta: DeploymentMeta,
         get_courses_use_case: IGetCoursesUseCase,
         get_course_by_id_use_case: IGetCourseByIdUseCase,
         get_courses_search_use_case: IGetCoursesSearchUseCase,
         course_list_service: CourseListService,
     ) -> None:
+        self.deploy_meta = deploy_meta
         self.get_courses_use_case = get_courses_use_case
         self.get_course_by_id_use_case = get_course_by_id_use_case
         self.get_courses_search_use_case = get_courses_search_use_case
@@ -74,7 +77,8 @@ class CommandHandler:
             "<b>Использование:</b>\n"
             "• Используйте меню для навигации\n"
             "• Для рекомендаций нажмите '✨ Рекомендации' и введите свой запрос\n"
-            "• Используйте фильтры для уточнения поиска"
+            "• Используйте фильтры для уточнения поиска\n\n"
+            f'🖥️ Также посетите нашу <a href="{self.deploy_meta.external_url}">веб-версию</a>!'
         )
         keyboard = build_main_menu_keyboard()
         await message.answer(text, reply_markup=keyboard)

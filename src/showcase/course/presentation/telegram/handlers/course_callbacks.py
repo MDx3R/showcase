@@ -52,14 +52,17 @@ class CourseCallbackHandler:
 
         keyboard = build_course_detail_keyboard(course_id)
         if callback.message:
-            await callback.message.edit_text(text, reply_markup=keyboard)  # pyright: ignore[reportAttributeAccessIssue]
+            await callback.message.edit_text(  # pyright: ignore[reportAttributeAccessIssue]
+                text, reply_markup=keyboard
+            )
         await callback.answer()
 
     async def _handle_enroll(self, callback: CallbackQuery) -> None:
         course_id_str = (callback.data or "").split("_", 1)[1]
         text = (
-            f"📝 <b>Запись на курс</b>\n\n"
+            f"📝 Запись на курс\n\n"
             f"Для записи на курс свяжитесь с администрацией.\n"
-            f"ID курса: <code>{course_id_str}</code>"
+            f"ID курса: {course_id_str}\n"
+            f"Или используйте нашу веб-версию (/help)!"
         )
         await callback.answer(text, show_alert=True)

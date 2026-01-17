@@ -2,6 +2,7 @@ from typing import Any
 
 from common.infrastructure.config.config import Settings
 from common.infrastructure.config.database_config import DatabaseConfig
+from common.infrastructure.config.deployment_meta import DeploymentMeta
 from common.infrastructure.config.llm_config import LLMConfig
 from common.infrastructure.config.logger_config import LoggerConfig
 from common.infrastructure.config.telegram_config import TelegramConfig
@@ -14,6 +15,7 @@ class AppConfig(Settings):
     llm: LLMConfig
     logger: LoggerConfig
     telegram: TelegramConfig
+    deploy: DeploymentMeta
 
     def masked_dict(self) -> dict[str, Any]:
         return self.model_dump(

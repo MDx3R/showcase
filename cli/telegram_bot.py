@@ -89,6 +89,7 @@ def main() -> None:
     )
 
     dp = create_dispatcher(
+        deploy_meta=config.deploy,
         get_courses_use_case=course_container.get_courses_usecase(),
         get_course_by_id_use_case=course_container.get_course_by_id_usecase(),
         get_courses_search_use_case=course_container.get_courses_search_usecase(),
