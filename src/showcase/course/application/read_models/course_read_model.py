@@ -56,3 +56,60 @@ class CourseReadModel(BaseModel):
     sections: list[CourseSectionReadModel]
     created_at: datetime
     updated_at: datetime
+
+
+class CourseSectionRankingModel(BaseModel):
+    """Optimized model for course section in ranking requests."""
+
+    name: str
+    description: str | None
+
+
+class CourseRankingModel(BaseModel):
+    """Optimized model for skill in ranking requests."""
+
+    name: str
+    description: str | None
+
+
+class CourseRankingReadModel(BaseModel):
+    """Optimized read model for LLM ranking requests.
+
+    Contains only essential fields needed for ranking:
+    - course_id: for identification
+    - name: course title
+    - description: course description
+    - category_names: category names for relevance matching
+    - skill_names: skill names for relevance matching
+    - sections: section names and descriptions for content matching
+    """
+
+    course_id: UUID
+    name: str
+    description: str | None
+    category_names: list[str]
+    skill_names: list[CourseRankingModel]
+    sections: list[CourseSectionRankingModel]
+
+    @classmethod
+    def from_course_read_model(
+        cls, course: CourseReadModel
+    ) -> "CourseRankingReadModel":
+        """Convert CourseReadModel to optimized CourseRankingReadModel."""
+        return cls(
+            course_id=course.course_id,
+            name=course.name,
+            description=course.description,
+            category_names=[cat.name for cat in course.categories],
+            skill_names=[
+                CourseRankingModel(name=skill.name, description=skill.description)
+                for skill in course.acquired_skills
+            ],
+            sections=[
+                CourseSectionRankingModel(
+                    name=section.name,
+                    description=section.description,
+                )
+                for section in course.sections
+            ],
+        )
