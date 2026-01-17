@@ -59,7 +59,7 @@ class AuthController:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
                     "error": "InvalidEmailOrPasswordError",
-                    "message": "Invalid email or password",
+                    "message": "Неправильное имя пользователя или пароль.",
                 },
             ) from exc
 

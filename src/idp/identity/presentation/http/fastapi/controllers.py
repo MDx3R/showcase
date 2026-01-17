@@ -53,6 +53,6 @@ class IdentityController:
                 detail={
                     "error": "EmailAlreadyTakenError",
                     "email": exc.email,
-                    "message": str(exc),
+                    "message": f"Электронная почта '{request.email}' уже занята другим пользователем.",
                 },
             ) from exc
