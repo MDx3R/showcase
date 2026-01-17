@@ -27,3 +27,7 @@ llm:
   api_key: "secret-key"
   base_url: "http://localhost:8080"
   model: "gpt-5-nano"
+
+telegram:
+  token: ""
+  enabled: false
