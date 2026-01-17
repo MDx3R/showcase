@@ -358,7 +358,7 @@ def main() -> FastAPI:
 
     server.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:8081", "https://cpe-courses.grebennikov.su"],
+        allow_origins=["http://localhost:8081", config.deploy.external_url],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
