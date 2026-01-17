@@ -1,4 +1,5 @@
 """Application entry point."""
+
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -299,7 +300,7 @@ def main() -> FastAPI:
     server = FastAPI(lifespan=lifespan)
 
     # Bootstrap common container with config and database
-    common_container = CommonContainer(config=config, database=database)
+    common_container = CommonContainer(config=config, logger=logger, database=database)
 
     uuid_generator = common_container.uuid_generator
     query_executor = common_container.query_executor
@@ -340,6 +341,7 @@ def main() -> FastAPI:
     )
 
     recommendation_container = RecommendationContainer(
+        logger=logger,
         llm=llm,
         course_read_repository=course_container.course_read_repository,
         category_read_repository=category_container.category_read_repository,
@@ -355,15 +357,12 @@ def main() -> FastAPI:
     init_recommendations(server, recommendation_container)
 
     server.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8081",
-        "https://cpe-courses.grebennikov.su"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+        CORSMiddleware,
+        allow_origins=["http://localhost:8081", "https://cpe-courses.grebennikov.su"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     # Create and configure app
     return server

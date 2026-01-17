@@ -1,3 +1,4 @@
+import logging
 from uuid import UUID
 
 from llama_index.core import PromptTemplate
@@ -44,6 +45,7 @@ class RecommendationService(IRecommendationService):
 
     def __init__(
         self,
+        logger: logging.Logger,
         llm: LLM,
         course_repository: ICourseReadRepository,
         category_repository: ICategoryReadRepository,
@@ -51,11 +53,31 @@ class RecommendationService(IRecommendationService):
         self.llm = llm
         self.course_repository = course_repository
         self.category_repository = category_repository
+        self.logger = logger
 
     async def recommend(self, dto: GetRecommendationsDTO) -> RecommendationsDTO:
+        self.logger.info(
+            "Starting recommendation",
+            extra={
+                "action": "recommend",
+                "input": {"query": dto.query, "limit": dto.limit, "skip": dto.skip},
+            },
+        )
+
         # ---------- 1. Categories ----------
         categories = await self.category_repository.get_all()
-        category_names = {c.name.lower() for c in categories}
+        category_names = {c.name for c in categories}
+
+        self.logger.info(
+            "Categories retrieved",
+            extra={
+                "action": "get_categories",
+                "result": {
+                    "count": len(categories),
+                    "category_names": list[str](category_names),
+                },
+            },
+        )
 
         # ---------- 2. LLM → SimpleCoursesFilter ----------
         filter_prompt = PromptTemplate(
@@ -77,28 +99,102 @@ class RecommendationService(IRecommendationService):
             Если параметр не указан явно — верни null. 
             Разрешено использовать только доступные категории, если они есть. 
             Если категорий нет, верни null для category_names.
+            Имена категорий чувствительны к регистру.
             """
         )
 
         filter_llm = self.llm.as_structured_llm(CourseFilterLLM)
 
-        response = await filter_llm.acomplete(
-            filter_prompt.format(
-                query=dto.query, categories=", ".join(category_names) or "нет"
-            )
+        formatted_filter_prompt = filter_prompt.format(
+            query=dto.query, categories="\n".join(category_names) or "нет"
         )
 
+        self.logger.info(
+            "Sending filter request to LLM",
+            extra={
+                "action": "llm_filter",
+                "input": {
+                    "query": dto.query,
+                    "categories": ", ".join(category_names) or "нет",
+                    "prompt_template": filter_prompt.template,
+                },
+            },
+        )
+
+        response = await filter_llm.acomplete(formatted_filter_prompt)
+
         filter_response = CourseFilterLLM.model_validate_json(response.text)
+
+        self.logger.info(
+            "Filter response received from LLM",
+            extra={
+                "action": "llm_filter",
+                "result": filter_response.model_dump(mode="json"),
+            },
+        )
 
         # ---------- 3. Map LLM → SimpleCoursesFilter ----------
         filter_query = filter_response.to_filter(
             min(self.MAX_LIMIT, dto.limit), skip=dto.skip
         )
 
+        self.logger.info(
+            "Filter mapped to SimpleCoursesFilter",
+            extra={
+                "action": "map_filter",
+                "input": filter_response.model_dump(mode="json"),
+                "result": {
+                    "categories": filter_query.categories,
+                    "format": (
+                        filter_query.format.value if filter_query.format else None
+                    ),
+                    "max_duration_hours": filter_query.max_duration_hours,
+                    "certificate_required": filter_query.certificate_required,
+                    "limit": filter_query.limit,
+                    "skip": filter_query.skip,
+                },
+            },
+        )
+
         # ---------- 4. DB filter ----------
+        self.logger.info(
+            "Filtering courses in database",
+            extra={
+                "action": "db_filter",
+                "input": {
+                    "categories": filter_query.categories,
+                    "format": (
+                        filter_query.format.value if filter_query.format else None
+                    ),
+                    "max_duration_hours": filter_query.max_duration_hours,
+                    "certificate_required": filter_query.certificate_required,
+                    "limit": filter_query.limit,
+                    "skip": filter_query.skip,
+                },
+            },
+        )
+
         courses = await self.course_repository.filter(filter_query)
 
+        self.logger.info(
+            "Courses filtered from database",
+            extra={
+                "action": "db_filter",
+                "result": {
+                    "count": len(courses),
+                    "course_ids": [str(c.course_id) for c in courses],
+                },
+            },
+        )
+
         if not courses:
+            self.logger.info(
+                "No courses found after filtering",
+                extra={
+                    "action": "recommend",
+                    "result": {"courses": [], "skip": dto.skip},
+                },
+            )
             return RecommendationsDTO(courses=[], skip=dto.skip)
 
         # ---------- 5. LLM → Ranking ----------
@@ -125,13 +221,39 @@ class RecommendationService(IRecommendationService):
 
         ranking_llm = self.llm.as_structured_llm(CourseRankingLLM)
 
+        courses_json = [c.model_dump(mode="json") for c in courses]
+
+        self.logger.info(
+            "Sending ranking request to LLM",
+            extra={
+                "action": "llm_ranking",
+                "input": {
+                    "query": dto.query,
+                    "courses_count": len(courses),
+                    "course_ids": [str(c.course_id) for c in courses],
+                    "prompt_template": ranking_prompt.template,
+                },
+            },
+        )
+
         response = await ranking_llm.acomplete(
-            ranking_prompt.format(
-                query=dto.query, courses=[c.model_dump(mode="json") for c in courses]
-            )
+            ranking_prompt.format(query=dto.query, courses=courses_json)
         )
 
         ranking_response = CourseRankingLLM.model_validate_json(response.text)
+
+        self.logger.info(
+            "Ranking response received from LLM",
+            extra={
+                "action": "llm_ranking",
+                "result": {
+                    "ranked_course_ids": [
+                        str(cid) for cid in ranking_response.course_ids
+                    ],
+                    "count": len(ranking_response.course_ids),
+                },
+            },
+        )
 
         course_by_id = {c.course_id: c for c in courses}
 
@@ -141,6 +263,20 @@ class RecommendationService(IRecommendationService):
             if cid in course_by_id
         ]
 
-        return RecommendationsDTO(
+        result = RecommendationsDTO(
             courses=ranked_courses, skip=dto.skip + len(ranked_courses)
         )
+
+        self.logger.info(
+            "Recommendation completed",
+            extra={
+                "action": "recommend",
+                "result": {
+                    "courses_count": len(ranked_courses),
+                    "course_ids": [str(c.course_id) for c in ranked_courses],
+                    "skip": result.skip,
+                },
+            },
+        )
+
+        return result
