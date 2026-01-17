@@ -33,11 +33,17 @@ def build_course_list_keyboard(
     builder = InlineKeyboardBuilder()
 
     # Course buttons
-    start_idx = (page - 1) * page_size
-    end_idx = min(start_idx + page_size, len(courses))
+    # If courses list is smaller or equal to page_size, assume it's already sliced to current page
+    if len(courses) <= page_size:
+        # Already sliced, show all courses
+        course_list = courses
+    else:
+        # Full list, slice it
+        start_idx = (page - 1) * page_size
+        end_idx = min(start_idx + page_size, len(courses))
+        course_list = courses[start_idx:end_idx]
 
-    for idx in range(start_idx, end_idx):
-        course = courses[idx]
+    for course in course_list:
         course_name = course.name[:30] + "..." if len(course.name) > 30 else course.name
         builder.button(
             text=f"📚 {course_name}",

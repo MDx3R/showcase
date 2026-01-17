@@ -17,6 +17,9 @@ from showcase.course.presentation.telegram.keyboards.builder import (
     build_course_list_keyboard,
     build_main_menu_keyboard,
 )
+from showcase.course.presentation.telegram.services.course_list_service import (
+    CourseListService,
+)
 from showcase.course.presentation.telegram.states.filters import FilterState
 
 
@@ -27,9 +30,11 @@ class QueryHandler:
         self,
         get_courses_search_use_case: IGetCoursesSearchUseCase,
         recommendation_service: IRecommendationService,
+        course_list_service: CourseListService,
     ) -> None:
         self.get_courses_search_use_case = get_courses_search_use_case
         self.recommendation_service = recommendation_service
+        self.course_list_service = course_list_service
         self.router = Router()
 
         self._register_handlers()
@@ -51,8 +56,18 @@ class QueryHandler:
             await message.answer("❌ Запрос не может быть пустым.")
             return
 
-        search_query = GetCoursesSearchQuery(query=query_text, limit=5)
-        courses = await self.get_courses_search_use_case.execute(search_query)
+        search_query = GetCoursesSearchQuery(
+            query=query_text, limit=10
+        )  # Increased limit for better results
+        try:
+            courses = await self.get_courses_search_use_case.execute(search_query)
+        except Exception as e:
+            print(f"Error searching courses: {e}")
+            text = "❌ Произошла ошибка при поиске курсов."
+            keyboard = build_main_menu_keyboard()
+            await message.answer(text, reply_markup=keyboard)
+            await state.clear()
+            return
 
         if not courses:
             text = f"❌ По запросу '{query_text}' ничего не найдено."
@@ -61,11 +76,13 @@ class QueryHandler:
             await state.clear()
             return
 
-        text = f"🔍 **Результаты поиска по запросу:** '{query_text}'\n\n"
+        text = f"🔍 <b>Результаты поиска по запросу:</b> '{query_text}'\n\n"
         text += format_course_list(courses)
-        keyboard = build_course_list_keyboard(courses, page=1, has_next=len(courses) >= 5)
+        keyboard = build_course_list_keyboard(
+            courses, page=1, has_next=len(courses) >= 10
+        )
 
-        await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
+        await message.answer(text, reply_markup=keyboard)
         await state.clear()
 
     async def _handle_recommendation_query(
@@ -93,25 +110,30 @@ class QueryHandler:
                     f"Попробуйте изменить формулировку или использовать поиск."
                 )
                 keyboard = build_main_menu_keyboard()
-                await loading_msg.edit_text(text, reply_markup=keyboard)
+                await loading_msg.edit_text(
+                    text, reply_markup=keyboard
+                )
                 await state.clear()
                 return
 
             text = (
-                f"✨ **Рекомендации для вас**\n\n"
-                f"*Ваш запрос:* '{query_text}'\n\n"
+                f"✨ <b>Рекомендации для вас</b>\n\n" f"<i>Ваш запрос:</i> '{query_text}'\n\n"
             )
             text += format_course_list(courses)
-            keyboard = build_course_list_keyboard(courses, page=1, has_next=len(courses) >= 10)
+            keyboard = build_course_list_keyboard(
+                courses, page=1, has_next=len(courses) >= 10
+            )
 
-            await loading_msg.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+            await loading_msg.edit_text(
+                text, reply_markup=keyboard
+            )
             await state.clear()
 
         except Exception as e:
-            text = (
-                f"❌ Произошла ошибка при поиске рекомендаций.\n"
-                f"Попробуйте использовать обычный поиск."
-            )
+            print(f"Error getting recommendations: {e}")
+            text = "❌ Произошла ошибка при поиске рекомендаций.\nПопробуйте использовать обычный поиск."
             keyboard = build_main_menu_keyboard()
-            await loading_msg.edit_text(text, reply_markup=keyboard)
+            await loading_msg.edit_text(
+                text, reply_markup=keyboard
+            )
             await state.clear()

@@ -17,7 +17,7 @@ from showcase.course.application.interfaces.repositories.course_read_repository 
     SimpleCoursesFilter,
 )
 from showcase.course.application.read_models.course_read_model import CourseReadModel
-from showcase.course.domain.value_objects import CourseStatus
+from showcase.course.domain.value_objects import CourseStatus, Format
 from showcase.course.infrastructure.database.postgres.sqlalchemy.mappers import (
     CourseReadMapper,
 )
@@ -60,6 +60,7 @@ class CourseReadRepository(ICourseReadRepository):
         status: CourseStatus | None = None,
         is_published: bool | None = None,
         category_id: UUID | None = None,
+        format: Format | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[CourseReadModel]:
@@ -71,6 +72,9 @@ class CourseReadRepository(ICourseReadRepository):
 
         if is_published is not None:
             stmt = stmt.where(CourseBase.is_published == is_published)
+
+        if format is not None:
+            stmt = stmt.where(CourseBase.format == format)
 
         if category_id is not None:
             stmt = stmt.join(CourseBase.categories).where(
@@ -149,7 +153,6 @@ class CourseReadRepository(ICourseReadRepository):
             CourseBase.start_date.asc().nulls_last(),
             CourseBase.duration_hours.asc(),
         )
-
 
         stmt = (
             stmt.options(

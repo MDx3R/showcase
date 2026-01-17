@@ -89,6 +89,7 @@ class ICourseReadRepository(ABC):
         status: CourseStatus | None = None,
         is_published: bool | None = None,
         category_id: UUID | None = None,
+        format: Format | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[CourseReadModel]:

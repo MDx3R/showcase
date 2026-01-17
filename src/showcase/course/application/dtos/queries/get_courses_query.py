@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from showcase.course.domain.value_objects import CourseStatus
+from showcase.course.domain.value_objects import CourseStatus, Format
 
 
 @dataclass
@@ -13,5 +13,6 @@ class GetCoursesQuery:
     status: CourseStatus | None = None
     is_published: bool | None = None
     category_id: UUID | None = None
+    format: Format | None = None
     skip: int = 0
     limit: int = 100
