@@ -155,11 +155,9 @@ def upgrade():
     )
 
     conn.execute(stmt)
-    conn.commit()
 
 
 def downgrade():
     conn = op.get_bind()
     course_table = sa.table("courses", sa.column("search_vector", TSVECTOR))
     conn.execute(sa.update(course_table).values(search_vector=text("''::tsvector")))
-    conn.commit()
