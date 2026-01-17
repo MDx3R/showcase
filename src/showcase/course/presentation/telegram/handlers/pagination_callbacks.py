@@ -29,6 +29,9 @@ class PaginationCallbackHandler:
         )
 
     async def _handle_page(self, callback: CallbackQuery, state: FSMContext) -> None:
+        if not callback.data:
+            await callback.answer("❌ Неверный номер страницы.", show_alert=True)
+            return
         try:
             page = int(callback.data.split("_", 1)[1])
         except (ValueError, IndexError):

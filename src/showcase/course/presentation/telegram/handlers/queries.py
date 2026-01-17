@@ -49,6 +49,9 @@ class QueryHandler:
 
     async def _handle_search_query(self, message: Message, state: FSMContext) -> None:
         """Handle search query input."""
+        if not message.text:
+            await message.answer("❌ Запрос не может быть пустым.")
+            return
         query_text = message.text.strip()
 
         if not query_text:
@@ -88,6 +91,9 @@ class QueryHandler:
         self, message: Message, state: FSMContext
     ) -> None:
         """Handle recommendation query input."""
+        if not message.text:
+            await message.answer("❌ Запрос не может быть пустым.")
+            return
         query_text = message.text.strip()
 
         if not query_text:

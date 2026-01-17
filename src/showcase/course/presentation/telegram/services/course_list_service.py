@@ -96,7 +96,8 @@ class CourseListService:
     ) -> None:
         """Send or edit message based on input type."""
         if isinstance(callback_or_message, CallbackQuery):
-            await callback_or_message.message.edit_text(text, reply_markup=keyboard)
+            if callback_or_message.message:
+                await callback_or_message.message.edit_text(text, reply_markup=keyboard)  # pyright: ignore[reportAttributeAccessIssue]
             await callback_or_message.answer()
         else:
             await callback_or_message.answer(text, reply_markup=keyboard)

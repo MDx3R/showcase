@@ -36,13 +36,15 @@ class MenuCallbackHandler:
     async def _handle_main_menu(self, callback: CallbackQuery) -> None:
         text = "👋 Добро пожаловать в бот каталога курсов!\n\nВыберите действие:"
         keyboard = build_main_menu_keyboard()
-        await callback.message.edit_text(text, reply_markup=keyboard)
+        if callback.message:
+            await callback.message.edit_text(text, reply_markup=keyboard)  # pyright: ignore[reportAttributeAccessIssue]
         await callback.answer()
 
     async def _handle_search(self, callback: CallbackQuery, state: FSMContext) -> None:
         await state.set_state(FilterState.waiting_for_search)
         text = "🔍 Введите запрос для поиска курсов:"
-        await callback.message.edit_text(text)
+        if callback.message:
+            await callback.message.edit_text(text)  # pyright: ignore[reportAttributeAccessIssue]
         await callback.answer()
 
     async def _handle_recommend(
@@ -54,7 +56,8 @@ class MenuCallbackHandler:
             "Опишите, какой курс вы ищете.\n"
             "Например: 'Хочу изучить Python для начинающих'"
         )
-        await callback.message.edit_text(text)
+        if callback.message:
+            await callback.message.edit_text(text)  # pyright: ignore[reportAttributeAccessIssue]
         await callback.answer()
 
     async def _handle_list_all(
@@ -66,5 +69,6 @@ class MenuCallbackHandler:
     async def _handle_filters(self, callback: CallbackQuery) -> None:
         text = "🔧 <b>Фильтры</b>\n\nВыберите фильтр для настройки:"
         keyboard = build_filter_keyboard()
-        await callback.message.edit_text(text, reply_markup=keyboard)
+        if callback.message:
+            await callback.message.edit_text(text, reply_markup=keyboard)  # pyright: ignore[reportAttributeAccessIssue]
         await callback.answer()
