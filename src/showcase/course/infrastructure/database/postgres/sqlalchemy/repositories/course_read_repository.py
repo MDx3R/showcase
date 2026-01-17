@@ -37,6 +37,10 @@ class CourseReadRepository(ICourseReadRepository):
     def __init__(self, executor: QueryExecutor) -> None:
         self.executor = executor
 
+    def make_prefix_tsquery(self, query: str) -> str:
+        tokens = query.strip().split()
+        return " & ".join(f"{token}:*" for token in tokens)
+
     async def get_by_id(self, course_id: UUID) -> CourseReadModel:
         """Get a course by ID."""
         stmt = (
@@ -101,7 +105,7 @@ class CourseReadRepository(ICourseReadRepository):
     ) -> list[CourseReadModel]:
         """Full-text search for courses using PostgreSQL tsvector in SELECT."""
         vector = CourseBase.search_vector
-        ts_query = func.plainto_tsquery("russian", query)
+        ts_query = func.to_tsquery("russian", self.make_prefix_tsquery(query))
 
         rank = func.ts_rank(vector, ts_query)
 
@@ -130,10 +134,10 @@ class CourseReadRepository(ICourseReadRepository):
         """
         stmt = select(CourseBase).distinct()
 
-        stmt = stmt.where(
-            CourseBase.status == filter.status,
-            CourseBase.is_published == filter.is_published,
-        )
+        stmt = stmt.where(CourseBase.is_published == filter.is_published)
+
+        if filter.status is not None:
+            stmt = stmt.where(CourseBase.status == filter.status)
 
         if filter.format is not None:
             stmt = stmt.where(CourseBase.format == filter.format)
@@ -170,11 +174,7 @@ class CourseReadRepository(ICourseReadRepository):
         return [CourseReadMapper.to_read_model(model) for model in models]
 
     async def filter_extended(self, filter: CoursesFilter) -> list[CourseReadModel]:
-        stmt = select(CourseBase)
-
-        # Флаги для отслеживания JOIN'ов
-        categories_joined = False
-        tags_joined = False
+        stmt = select(CourseBase).distinct()
 
         # Base visibility filters
         if filter.status is not None:
@@ -182,8 +182,17 @@ class CourseReadRepository(ICourseReadRepository):
         if filter.is_published is not None:
             stmt = stmt.where(CourseBase.is_published == filter.is_published)
 
-        if filter.search:
-            stmt = stmt.filter(CourseBase.name.ilike(f"%{filter.search}%"))
+        # Full-text search
+        rank = None
+        if filter.search and filter.search.strip():
+            vector = CourseBase.search_vector
+            ts_query = func.to_tsquery(
+                "russian", self.make_prefix_tsquery(filter.search)
+            )
+
+            rank = func.ts_rank(vector, ts_query)
+
+            stmt = stmt.where(vector.op("@@")(ts_query))
 
         # Formats and education types
         if filter.formats:
@@ -194,14 +203,12 @@ class CourseReadRepository(ICourseReadRepository):
         # Tags
         if filter.tags:
             stmt = stmt.join(CourseBase.tags).where(TagBase.name.in_(filter.tags))
-            tags_joined = True
 
         # Category ids
         if filter.category_ids:
             stmt = stmt.join(CourseBase.categories).where(
                 CategoryBase.category_id.in_(filter.category_ids)
             )
-            categories_joined = True
 
         # Price filters
         if filter.price_min is not None:
@@ -226,6 +233,9 @@ class CourseReadRepository(ICourseReadRepository):
         # Sorting
         order_by_cols: list[ColumnElement[Any]] = []
 
+        if rank is not None:
+            order_by_cols.append(rank.desc())
+
         sort_col = cast(
             dict[CourseSortField, ColumnElement[Any]],
             {
@@ -246,25 +256,17 @@ class CourseReadRepository(ICourseReadRepository):
 
         stmt = stmt.order_by(*order_by_cols)
 
-        # Eager loading: используем contains_eager для joined relationships
-        options_list = [
-            joinedload(CourseBase.sections),
-            joinedload(CourseBase.acquired_skills),
-            joinedload(CourseBase.lecturers),
-        ]
-
-        # Для categories и tags используем contains_eager если они уже joined
-        if categories_joined:
-            options_list.append(contains_eager(CourseBase.categories))
-        else:
-            options_list.append(joinedload(CourseBase.categories))
-
-        if tags_joined:
-            options_list.append(contains_eager(CourseBase.tags))
-        else:
-            options_list.append(joinedload(CourseBase.tags))
-
-        stmt = stmt.options(*options_list).offset(filter.skip).limit(filter.limit)
+        stmt = (
+            stmt.options(
+                joinedload(CourseBase.sections),
+                joinedload(CourseBase.categories),
+                joinedload(CourseBase.tags),
+                joinedload(CourseBase.acquired_skills),
+                joinedload(CourseBase.lecturers),
+            )
+            .offset(filter.skip)
+            .limit(filter.limit)
+        )
 
         models = await self.executor.execute_scalar_many(stmt)
         return [CourseReadMapper.to_read_model(model) for model in models]

@@ -20,6 +20,10 @@ from sqlalchemy import delete, func, literal_column, select, update
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import joinedload
 
+from showcase.course.infrastructure.database.postgres.sqlalchemy.models.skill import (
+    SkillBase,
+)
+
 
 class CourseRepository(ICourseRepository):
     """Write repository for courses."""
@@ -150,6 +154,22 @@ class CourseRepository(ICourseRepository):
             .scalar_subquery()
         )
 
+        skills_text_subq = (
+            select(
+                func.coalesce(
+                    func.string_agg(
+                        func.concat_ws(" ", SkillBase.name, SkillBase.description),
+                        " ",
+                    ),
+                    "",
+                )
+            )
+            .select_from(CourseSkillBase)
+            .join(SkillBase, CourseSkillBase.skill_id == SkillBase.skill_id)
+            .where(CourseSkillBase.course_id == course.course_id)
+            .scalar_subquery()
+        )
+
         search_vector = (
             func.setweight(
                 func.to_tsvector("russian", func.coalesce(CourseBase.name, "")).cast(
@@ -168,6 +188,12 @@ class CourseRepository(ICourseRepository):
             .op("||")(
                 func.setweight(
                     func.to_tsvector("russian", sections_text_subq).cast(TSVECTOR),
+                    literal_column("'C'"),
+                )
+            )
+            .op("||")(
+                func.setweight(
+                    func.to_tsvector("russian", skills_text_subq).cast(TSVECTOR),
                     literal_column("'C'"),
                 )
             )
