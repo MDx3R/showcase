@@ -33,7 +33,12 @@ class IdentityController:
     async def me(
         self, descriptor: Annotated[IdentityDescriptor, Depends(get_descriptor)]
     ) -> IdentityResponse:
-        return IdentityResponse(id=descriptor.identity_id, email=descriptor.email, username=descriptor.username, role=descriptor.role)
+        return IdentityResponse(
+            id=descriptor.identity_id,
+            email=descriptor.email,
+            username=descriptor.username,
+            role=descriptor.role,
+        )
 
     @identity_router.post("/register", dependencies=[Depends(require_unauthenticated)])
     async def register(self, request: RegisterUserRequest) -> IDResponse:
@@ -44,7 +49,7 @@ class IdentityController:
             return IDResponse(id=identity_id)
         except EmailAlreadyTakenError as exc:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_409_CONFLICT,
                 detail={
                     "error": "EmailAlreadyTakenError",
                     "email": exc.email,
