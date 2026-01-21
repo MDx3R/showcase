@@ -1,6 +1,7 @@
 """Course ranking: LLM-based ordering by relevance to user goal."""
 
 import logging
+from functools import reduce
 from uuid import UUID
 
 from llama_index.core import PromptTemplate
@@ -30,6 +31,7 @@ class CourseRankingService(ICourseRankingService):
     """Ranks courses by relevance to user query using LLM."""
 
     MIN_CONFIDENCE: float = 0.5
+    RANKING_WEAK_THRESHOLD: int = 3
     RANKING_PROMPT = PromptTemplate(
         """
         Пользовательская цель:
@@ -48,7 +50,12 @@ class CourseRankingService(ICourseRankingService):
         - И описание курса или секций/модулей не содержит терминов, связанных с целью
 
         Отсутствие информации считается признаком неподходящего курса.
-        Пример confidence: 0.0 (совсем не подходит), 1.0 (идеально подходит)
+        Пример confidence:
+        - 0.0 — совсем не подходит к цели пользователя
+        - 0.25 — слабое совпадение, курс мало связан с запросом
+        - 0.5 — умеренно релевантный курс, может быть полезен
+        - 0.75 — хорошо подходит, совпадение заметное
+        - 1.0 — идеально подходит, курс полностью соответствует цели
         """
     )
 
@@ -95,6 +102,7 @@ class CourseRankingService(ICourseRankingService):
                 "service": "CourseRanking",
                 "ranked_count": len(result.courses),
                 "ranked_ids": [str(c.course_id) for c in result.courses],
+                "ranked_confidence": [c.confidence for c in result.courses],
             },
         )
 
@@ -106,6 +114,7 @@ class CourseRankingService(ICourseRankingService):
         ]
 
         ranking_weak = not ranked
+
         if not ranked:
             self._logger.warning(
                 "Ranking weak: no valid IDs, keeping original order",
@@ -113,7 +122,7 @@ class CourseRankingService(ICourseRankingService):
             )
             ranked = courses
             ranking_weak = True
-        elif all(c.confidence < self.MIN_CONFIDENCE for c in result.courses):
+        elif self.is_below_threshold(result.courses):
             self._logger.warning(
                 "Ranking weak: confidence level is below threshold for all courses",
                 extra={
@@ -125,3 +134,17 @@ class CourseRankingService(ICourseRankingService):
             ranking_weak = True
 
         return ranked, ranking_weak
+
+    @classmethod
+    def is_below_threshold(cls, courses: list[CourseRankingItem]) -> bool:
+        if not courses:
+            return True
+
+        return (
+            reduce(
+                lambda count, x: count + (x >= cls.MIN_CONFIDENCE),
+                [c.confidence for c in courses],
+                0,
+            )
+            < cls.RANKING_WEAK_THRESHOLD
+        )
