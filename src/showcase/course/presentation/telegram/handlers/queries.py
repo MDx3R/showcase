@@ -7,6 +7,7 @@ from showcase.course.application.dtos.queries import GetCoursesSearchQuery
 from showcase.course.application.interfaces.services.recommendation_service import (
     GetRecommendationsDTO,
     IRecommendationService,
+    RecommendationNotice,
 )
 from showcase.course.application.interfaces.usecases.query.get_courses_search_usecase import (
     IGetCoursesSearchUseCase,
@@ -108,6 +109,7 @@ class QueryHandler:
             dto = GetRecommendationsDTO(query=query_text, limit=10)
             recommendations = await self.recommendation_service.recommend(dto)
             courses = recommendations.courses
+            notices = recommendations.notices
 
             if not courses:
                 text = (
@@ -120,11 +122,41 @@ class QueryHandler:
                 await state.clear()
                 return
 
-            text = (
-                f"✨ <b>Рекомендации для вас</b>\n\n"
-                f"<i>Ваш запрос:</i> '{query_text}'\n\n"
-            )
+            # Build status message based on notices
+            status_parts = []
+            if RecommendationNotice.QUERY_INVALID in notices:
+                status_parts.append(
+                    "⚠️ <i>Запрос не был распознан, показаны общие рекомендации</i>"
+                )
+            elif RecommendationNotice.QUERY_AMBIGUOUS in notices:
+                status_parts.append(
+                    "⚠️ <i>Запрос неоднозначен, показаны общие рекомендации</i>"
+                )
+            elif RecommendationNotice.FALLBACK_USED in notices:
+                status_parts.append("ℹ️ <i>Показаны популярные курсы</i>")
+
+            if RecommendationNotice.RANKING_WEAK in notices:
+                status_parts.append("💡 <i>Ранжирование может быть неточным</i>")
+
+            if RecommendationNotice.FILTERS_INFERRED in notices and not any(
+                n in notices
+                for n in [
+                    RecommendationNotice.QUERY_INVALID,
+                    RecommendationNotice.QUERY_AMBIGUOUS,
+                    RecommendationNotice.FALLBACK_USED,
+                ]
+            ):
+                status_parts.append("✅ <i>Фильтры успешно применены</i>")
+
+            text = "✨ <b>Рекомендации для вас</b>\n\n"
+            text += f'<i>Ваш запрос:</i> "{query_text}"\n'
+
+            if status_parts:
+                text += "\n" + "\n".join(status_parts) + "\n"
+
+            text += "\n"
             text += format_course_list(courses)
+
             keyboard = build_course_list_keyboard(
                 courses, page=1, page_size=dto.limit, has_next=False
             )
