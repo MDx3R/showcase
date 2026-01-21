@@ -7,12 +7,14 @@ from showcase.course.application.interfaces.repositories.course_read_repository 
     ICourseReadRepository,
     SimpleCoursesFilter,
 )
+from showcase.course.application.interfaces.services.course_retrieval_service import (
+    ICourseRetrievalService,
+)
 from showcase.course.application.read_models.course_read_model import CourseReadModel
+from showcase.course.application.read_models.filter_inference import CourseFilterLLM
 
-from .filter_inference_service import CourseFilterLLM
 
-
-class CourseRetrievalService:
+class CourseRetrievalService(ICourseRetrievalService):
     """Fetches courses by inferred filter or provides fallback list."""
 
     def __init__(
@@ -85,7 +87,7 @@ class CourseRetrievalService:
             extra={
                 "service": "CourseRetrieval",
                 "categories": simple_filter.categories,
-                "format": simple_filter.format.value if simple_filter.format else None,
+                "format": simple_filter.format,
                 "max_duration_hours": simple_filter.max_duration_hours,
                 "certificate_required": simple_filter.certificate_required,
                 "limit": limit,

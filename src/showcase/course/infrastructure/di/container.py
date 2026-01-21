@@ -3,6 +3,12 @@
 from typing import Any
 
 from dependency_injector import containers, providers
+from showcase.course.application.services.course_retrieval_service import (
+    CourseRetrievalService,
+)
+from showcase.course.application.services.recommendation_service import (
+    RecommendationService,
+)
 from showcase.course.application.usecases import (
     CreateCourseUseCase,
     CreateSkillUseCase,
@@ -44,17 +50,11 @@ from showcase.course.infrastructure.database.postgres.sqlalchemy.repositories im
 from showcase.course.infrastructure.database.postgres.sqlalchemy.repositories.enrollment_repository import (
     EnrollmentRepository,
 )
-from showcase.course.infrastructure.services.course_ranking_service import (
+from showcase.course.infrastructure.services.llama_index.course_ranking_service import (
     CourseRankingService,
 )
-from showcase.course.infrastructure.services.course_retrieval_service import (
-    CourseRetrievalService,
-)
-from showcase.course.infrastructure.services.filter_inference_service import (
+from showcase.course.infrastructure.services.llama_index.filter_inference_service import (
     FilterInferenceService,
-)
-from showcase.course.infrastructure.services.recommendation_service import (
-    RecommendationService,
 )
 
 

@@ -6,32 +6,12 @@ from uuid import UUID
 from llama_index.core import PromptTemplate
 from llama_index.core.llms import LLM
 from pydantic import BaseModel
+from showcase.course.application.interfaces.services.course_ranking_service import (
+    ICourseRankingService,
+)
 from showcase.course.application.read_models.course_read_model import (
     CourseRankingReadModel,
     CourseReadModel,
-)
-
-
-RANKING_PROMPT = PromptTemplate(
-    """
-    Пользовательская цель:
-    "{query}"
-
-    Курсы:
-    {courses}
-
-    Верни JSON:
-    - courses: list[{"course_id": UUID, "confidence": float}]
-
-    Отсортируй курсы от наиболее подходящего к наименее подходящему, исключи полностью неподходящие.
-    Курс должен быть ИСКЛЮЧЁН из списка, если:
-    - у него нет категорий, связанных с целью
-    - И нет навыков, связанных с целью
-    - И описание курса или секций/модулей не содержит терминов, связанных с целью
-
-    Отсутствие информации считается признаком неподходящего курса.
-    Пример confidence: 0.0 (совсем не подходит), 1.0 (идеально подходит)
-    """
 )
 
 
@@ -46,10 +26,31 @@ class CourseRankingLLM(BaseModel):
     courses: list[CourseRankingItem]
 
 
-class CourseRankingService:
+class CourseRankingService(ICourseRankingService):
     """Ranks courses by relevance to user query using LLM."""
 
     MIN_CONFIDENCE: float = 0.5
+    RANKING_PROMPT = PromptTemplate(
+        """
+        Пользовательская цель:
+        "{query}"
+
+        Курсы:
+        {courses}
+
+        Верни JSON:
+        - courses: list[{"course_id": UUID, "confidence": float}]
+
+        Отсортируй курсы от наиболее подходящего к наименее подходящему, исключи полностью неподходящие.
+        Курс должен быть ИСКЛЮЧЁН из списка, если:
+        - у него нет категорий, связанных с целью
+        - И нет навыков, связанных с целью
+        - И описание курса или секций/модулей не содержит терминов, связанных с целью
+
+        Отсутствие информации считается признаком неподходящего курса.
+        Пример confidence: 0.0 (совсем не подходит), 1.0 (идеально подходит)
+        """
+    )
 
     def __init__(self, logger: logging.Logger, llm: LLM) -> None:
         self._logger = logger
@@ -84,7 +85,7 @@ class CourseRankingService:
         )
 
         ranking_llm = self._llm.as_structured_llm(CourseRankingLLM)
-        formatted = RANKING_PROMPT.format(query=query, courses=courses_json)
+        formatted = self.RANKING_PROMPT.format(query=query, courses=courses_json)
         response = await ranking_llm.acomplete(formatted)
         result = CourseRankingLLM.model_validate_json(response.text)
 

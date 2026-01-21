@@ -5,6 +5,15 @@ import logging
 from showcase.category.application.interfaces.repositories.category_read_repository import (
     ICategoryReadRepository,
 )
+from showcase.course.application.interfaces.services.course_ranking_service import (
+    ICourseRankingService,
+)
+from showcase.course.application.interfaces.services.course_retrieval_service import (
+    ICourseRetrievalService,
+)
+from showcase.course.application.interfaces.services.filter_inference_service import (
+    IFilterInferenceService,
+)
 from showcase.course.application.interfaces.services.recommendation_service import (
     GetRecommendationsDTO,
     IRecommendationService,
@@ -12,34 +21,28 @@ from showcase.course.application.interfaces.services.recommendation_service impo
     RecommendationsDTO,
 )
 
-from .course_ranking_service import CourseRankingService
-from .course_retrieval_service import CourseRetrievalService
-from .filter_inference_service import FilterInferenceService
-
-
-FALLBACK_RANKING_QUERY = """
-Предложи курсы, отсортированные по предполагаемой востребованности для широкой аудитории.
-
-Критерии:
-- универсальность
-- актуальность
-- прикладная ценность
-- не нишевость
-"""
-
 
 class RecommendationService(IRecommendationService):
     """Orchestrates filter inference, course retrieval, and LLM ranking."""
 
     MAX_LIMIT: int = 25
+    FALLBACK_RANKING_QUERY = """
+        Предложи курсы, отсортированные по предполагаемой востребованности для широкой аудитории.
+
+        Критерии:
+        - универсальность
+        - актуальность
+        - прикладная ценность
+        - не нишевость
+    """
 
     def __init__(
         self,
         logger: logging.Logger,
         category_repository: ICategoryReadRepository,
-        filter_inference: FilterInferenceService,
-        course_retrieval: CourseRetrievalService,
-        course_ranking: CourseRankingService,
+        filter_inference: IFilterInferenceService,
+        course_retrieval: ICourseRetrievalService,
+        course_ranking: ICourseRankingService,
     ) -> None:
         self._logger = logger
         self._category_repository = category_repository
@@ -82,13 +85,14 @@ class RecommendationService(IRecommendationService):
             notices.append(RecommendationNotice.FILTERS_INFERRED)
 
         if not courses:
+            query = self.FALLBACK_RANKING_QUERY
             notices.append(
                 RecommendationNotice.QUERY_INVALID
                 if not filter_llm.is_decisive
                 else RecommendationNotice.QUERY_AMBIGUOUS
             )
             notices.append(RecommendationNotice.FALLBACK_USED)
-            query = FALLBACK_RANKING_QUERY
+
             courses = await self._course_retrieval.get_fallback_courses(
                 limit=self.MAX_LIMIT
             )
@@ -110,11 +114,9 @@ class RecommendationService(IRecommendationService):
             notices.append(RecommendationNotice.RANKING_WEAK)
 
         # 5. Build result
-        result_courses = ranked[: min(self.MAX_LIMIT, dto.limit)]
+        result_courses = ranked[:limit]
         result = RecommendationsDTO(
-            notices=notices,
-            courses=result_courses,
-            skip=dto.skip + len(ranked),
+            notices=notices, courses=result_courses, skip=dto.skip + len(ranked)
         )
 
         self._logger.info(
