@@ -11,7 +11,10 @@ from showcase.category.application.interfaces.usecases.query.get_categories_usec
 from showcase.course.application.interfaces.services.recommendation_service import (
     IRecommendationService,
 )
-from showcase.course.application.interfaces.usecases.query import IGetCoursesUseCase
+from showcase.course.application.interfaces.usecases.query import (
+    IGetCoursesExtendedUseCase,
+    IGetCoursesUseCase,
+)
 from showcase.course.application.interfaces.usecases.query.get_course_by_id_usecase import (
     IGetCourseByIdUseCase,
 )
@@ -64,7 +67,7 @@ def create_bot(
 
 def create_dispatcher(
     deploy_meta: DeploymentMeta,
-    get_courses_use_case: IGetCoursesUseCase,
+    get_courses_use_case: IGetCoursesExtendedUseCase,
     get_course_by_id_use_case: IGetCourseByIdUseCase,
     get_courses_search_use_case: IGetCoursesSearchUseCase,
     get_categories_use_case: IGetCategoriesUseCase,
@@ -92,8 +95,6 @@ def create_dispatcher(
     # Initialize handlers
     command_handler = CommandHandler(
         deploy_meta=deploy_meta,
-        get_courses_use_case=get_courses_use_case,
-        get_course_by_id_use_case=get_course_by_id_use_case,
         get_courses_search_use_case=get_courses_search_use_case,
         course_list_service=course_list_service,
     )

@@ -6,12 +6,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from common.infrastructure.config.deployment_meta import DeploymentMeta
 from showcase.course.application.dtos.queries import GetCoursesSearchQuery
-from showcase.course.application.interfaces.usecases.query import (
-    IGetCoursesUseCase,
-)
-from showcase.course.application.interfaces.usecases.query.get_course_by_id_usecase import (
-    IGetCourseByIdUseCase,
-)
 from showcase.course.application.interfaces.usecases.query.get_courses_search_usecase import (
     IGetCoursesSearchUseCase,
 )
@@ -31,14 +25,10 @@ class CommandHandler:
     def __init__(
         self,
         deploy_meta: DeploymentMeta,
-        get_courses_use_case: IGetCoursesUseCase,
-        get_course_by_id_use_case: IGetCourseByIdUseCase,
         get_courses_search_use_case: IGetCoursesSearchUseCase,
         course_list_service: CourseListService,
     ) -> None:
         self.deploy_meta = deploy_meta
-        self.get_courses_use_case = get_courses_use_case
-        self.get_course_by_id_use_case = get_course_by_id_use_case
         self.get_courses_search_use_case = get_courses_search_use_case
         self.course_list_service = course_list_service
         self.router = Router()

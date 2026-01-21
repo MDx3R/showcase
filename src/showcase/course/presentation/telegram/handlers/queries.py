@@ -59,7 +59,7 @@ class QueryHandler:
             return
 
         search_query = GetCoursesSearchQuery(
-            query=query_text, limit=10
+            query=query_text, limit=5
         )  # Increased limit for better results
         try:
             courses = await self.get_courses_search_use_case.execute(search_query)
@@ -81,11 +81,12 @@ class QueryHandler:
         text = f"🔍 <b>Результаты поиска по запросу:</b> '{query_text}'\n\n"
         text += format_course_list(courses)
         keyboard = build_course_list_keyboard(
-            courses, page=1, has_next=len(courses) >= 10
+            courses, page=1, has_next=len(courses) >= 5
         )
 
         await message.answer(text, reply_markup=keyboard)
         await state.clear()
+        await state.update_data(search_query=query_text)
 
     async def _handle_recommendation_query(
         self, message: Message, state: FSMContext
@@ -115,30 +116,26 @@ class QueryHandler:
                     f"Попробуйте изменить формулировку или использовать поиск."
                 )
                 keyboard = build_main_menu_keyboard()
-                await loading_msg.edit_text(
-                    text, reply_markup=keyboard
-                )
+                await loading_msg.edit_text(text, reply_markup=keyboard)
                 await state.clear()
                 return
 
             text = (
-                f"✨ <b>Рекомендации для вас</b>\n\n" f"<i>Ваш запрос:</i> '{query_text}'\n\n"
+                f"✨ <b>Рекомендации для вас</b>\n\n"
+                f"<i>Ваш запрос:</i> '{query_text}'\n\n"
             )
             text += format_course_list(courses)
             keyboard = build_course_list_keyboard(
-                courses, page=1, has_next=len(courses) >= 10
+                courses, page=1, page_size=dto.limit, has_next=False
             )
 
-            await loading_msg.edit_text(
-                text, reply_markup=keyboard
-            )
+            await loading_msg.edit_text(text, reply_markup=keyboard)
             await state.clear()
+            await state.update_data(back_to_list=False)
 
         except Exception as e:
             print(f"Error getting recommendations: {e}")
             text = "❌ Произошла ошибка при поиске рекомендаций.\nПопробуйте использовать обычный поиск."
             keyboard = build_main_menu_keyboard()
-            await loading_msg.edit_text(
-                text, reply_markup=keyboard
-            )
+            await loading_msg.edit_text(text, reply_markup=keyboard)
             await state.clear()

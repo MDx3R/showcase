@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from showcase.course.application.dtos.queries import GetCourseByIdQuery
 from showcase.course.application.interfaces.usecases.query.get_course_by_id_usecase import (
@@ -31,7 +32,9 @@ class CourseCallbackHandler:
             self._handle_enroll, F.data.startswith("enroll_")
         )
 
-    async def _handle_course_detail(self, callback: CallbackQuery) -> None:
+    async def _handle_course_detail(
+        self, callback: CallbackQuery, state: FSMContext
+    ) -> None:
         course_id_str = (callback.data or "").split("_", 1)[1]
         try:
             course_id = UUID(course_id_str)
@@ -50,9 +53,12 @@ class CourseCallbackHandler:
         if len(text) > 4096:
             text = text[:4090] + "...\n\n(Текст обрезан)"
 
-        keyboard = build_course_detail_keyboard(course_id)
+        data = await state.get_data()
+        back_to_list = data.get("back_to_list", True)
+
+        keyboard = build_course_detail_keyboard(course_id, back_to_list=back_to_list)
         if callback.message:
-            await callback.message.edit_text(  # pyright: ignore[reportAttributeAccessIssue]
+            await callback.message.answer(  # pyright: ignore[reportAttributeAccessIssue]
                 text, reply_markup=keyboard
             )
         await callback.answer()
