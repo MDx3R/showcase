@@ -104,6 +104,7 @@ def create_dispatcher(
     )
 
     course_callback_handler = CourseCallbackHandler(
+        deploy_meta=deploy_meta,
         get_course_by_id_use_case=get_course_by_id_use_case,
     )
 
