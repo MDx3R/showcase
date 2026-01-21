@@ -28,7 +28,7 @@ from showcase.course.infrastructure.database.postgres.sqlalchemy.models.tag impo
     TagBase,
 )
 from sqlalchemy import ColumnElement, func, select
-from sqlalchemy.orm import joinedload, evaluator
+from sqlalchemy.orm import joinedload
 
 
 class CourseReadRepository(ICourseReadRepository):
@@ -112,6 +112,7 @@ class CourseReadRepository(ICourseReadRepository):
         stmt = (
             select(CourseBase)
             .where(vector.op("@@")(ts_query))
+            .where(CourseBase.is_published.is_(True))
             .order_by(rank.desc())
             .options(
                 joinedload(CourseBase.sections),

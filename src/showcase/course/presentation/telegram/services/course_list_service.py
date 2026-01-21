@@ -4,8 +4,12 @@ from uuid import UUID
 
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-from showcase.course.application.dtos.queries import GetCoursesQuery
-from showcase.course.application.interfaces.usecases.query import IGetCoursesUseCase
+from showcase.course.application.interfaces.repositories.course_read_repository import (
+    CoursesFilter,
+)
+from showcase.course.application.interfaces.usecases.query.get_courses_extended_usecase import (
+    IGetCoursesExtendedUseCase,
+)
 from showcase.course.domain.value_objects import CourseStatus, Format
 from showcase.course.presentation.telegram.formatters.course import format_course_list
 from showcase.course.presentation.telegram.keyboards.builder import (
@@ -20,7 +24,7 @@ PAGE_SIZE = 5  # Constant for pagination
 class CourseListService:
     """Service for fetching and displaying paginated course lists."""
 
-    def __init__(self, get_courses_use_case: IGetCoursesUseCase) -> None:
+    def __init__(self, get_courses_use_case: IGetCoursesExtendedUseCase) -> None:
         self.get_courses_use_case = get_courses_use_case
 
     async def display_course_list(
@@ -39,14 +43,16 @@ class CourseListService:
         status = data.get("status")
         category_id = data.get("category_id")
         format_value = data.get("format")  # Now used
+        search_query = data.get("search_query")
 
         skip = (page - 1) * PAGE_SIZE
-        query = GetCoursesQuery(
+        query = CoursesFilter(
             is_published=True,
+            search=search_query,
             status=CourseStatus(status) if status else None,
-            category_id=UUID(category_id) if category_id else None,
-            format=(
-                Format(format_value) if format_value else None
+            category_ids=[UUID(category_id)] if category_id else None,
+            formats=(
+                [Format(format_value)] if format_value else None
             ),  # Added format filter
             skip=skip,
             limit=PAGE_SIZE + 1,
@@ -97,7 +103,9 @@ class CourseListService:
         """Send or edit message based on input type."""
         if isinstance(callback_or_message, CallbackQuery):
             if callback_or_message.message:
-                await callback_or_message.message.edit_text(text, reply_markup=keyboard)  # pyright: ignore[reportAttributeAccessIssue]
+                await callback_or_message.message.edit_text(  # pyright: ignore[reportAttributeAccessIssue]
+                    text, reply_markup=keyboard
+                )
             await callback_or_message.answer()
         else:
             await callback_or_message.answer(text, reply_markup=keyboard)
