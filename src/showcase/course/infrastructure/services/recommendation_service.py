@@ -1,4 +1,5 @@
 import logging
+import random
 from uuid import UUID
 
 from llama_index.core import PromptTemplate
@@ -14,15 +15,18 @@ from showcase.course.application.interfaces.repositories.course_read_repository 
 from showcase.course.application.interfaces.services.recommendation_service import (
     GetRecommendationsDTO,
     IRecommendationService,
+    RecommendationNotice,
     RecommendationsDTO,
 )
 from showcase.course.application.read_models.course_read_model import (
     CourseRankingReadModel,
+    CourseReadModel,
 )
 from showcase.course.domain.value_objects.format import Format
 
 
 class CourseFilterLLM(BaseModel):
+    is_decisive: bool = True
     category_names: list[str] | None = None
     format: Format | None = None
     max_duration_hours: int | None = None
@@ -59,6 +63,7 @@ class RecommendationService(IRecommendationService):
         self.logger = logger
 
     async def recommend(self, dto: GetRecommendationsDTO) -> RecommendationsDTO:
+        query = dto.query
         self.logger.info(
             "Starting recommendation",
             extra={
@@ -94,10 +99,21 @@ class RecommendationService(IRecommendationService):
             {categories}
 
             Верни JSON с полями:
+            - is_decisive: bool
             - category_names: list[str] | null
             - format: "online" | "offline" | "mixed" | null
             - max_duration_hours: int | null
             - certificate_required: bool | null
+            
+            Правила для is_decisive:
+            Верни true, если запрос осмысленный и составлен на естественном языке,
+            даже если он общий или требует уточнений.
+            Верни false, если запрос не является осмысленным пользовательским запросом:
+            * состоит из случайных символов или чисел
+            * содержит только знаки препинания
+            * слишком короткий и не несёт смысловой нагрузки
+
+            Если is_decisive = false, верни null для всех остальных полей.
 
             Если параметр не указан явно — верни null.
             Разрешено использовать только доступные категории, если они есть.
@@ -137,69 +153,122 @@ class RecommendationService(IRecommendationService):
             },
         )
 
-        # ---------- 3. Map LLM → SimpleCoursesFilter ----------
-        filter_query = filter_response.to_filter(
-            min(self.MAX_LIMIT, dto.limit), skip=dto.skip
-        )
+        # Indecisive response fallback
+        courses = list[CourseReadModel]()
+        notices = list[RecommendationNotice]()
+        if filter_response.is_decisive and (
+            filter_response.category_names
+            or filter_response.format
+            or filter_response.max_duration_hours
+            or filter_response.certificate_required
+        ):
+            # ---------- 3. Map LLM → SimpleCoursesFilter ----------
+            notices.append(RecommendationNotice.FILTERS_INFERRED)
+            validated_categories = [
+                c for c in filter_response.category_names or [] if c in category_names
+            ]
+            filter_response.category_names = validated_categories
 
-        self.logger.info(
-            "Filter mapped to SimpleCoursesFilter",
-            extra={
-                "action": "map_filter",
-                "input": filter_response.model_dump(mode="json"),
-                "result": {
-                    "categories": filter_query.categories,
-                    "format": (
-                        filter_query.format.value if filter_query.format else None
-                    ),
-                    "max_duration_hours": filter_query.max_duration_hours,
-                    "certificate_required": filter_query.certificate_required,
-                    "limit": filter_query.limit,
-                    "skip": filter_query.skip,
-                },
-            },
-        )
+            filter_query = filter_response.to_filter(
+                min(self.MAX_LIMIT, dto.limit), skip=dto.skip
+            )
 
-        # ---------- 4. DB filter ----------
-        self.logger.info(
-            "Filtering courses in database",
-            extra={
-                "action": "db_filter",
-                "input": {
-                    "categories": filter_query.categories,
-                    "format": (
-                        filter_query.format.value if filter_query.format else None
-                    ),
-                    "max_duration_hours": filter_query.max_duration_hours,
-                    "certificate_required": filter_query.certificate_required,
-                    "limit": filter_query.limit,
-                    "skip": filter_query.skip,
-                },
-            },
-        )
-
-        courses = await self.course_repository.filter(filter_query)
-
-        self.logger.info(
-            "Courses filtered from database",
-            extra={
-                "action": "db_filter",
-                "result": {
-                    "count": len(courses),
-                    "course_ids": [str(c.course_id) for c in courses],
-                },
-            },
-        )
-
-        if not courses:
             self.logger.info(
-                "No courses found after filtering",
+                "Filter mapped to SimpleCoursesFilter",
                 extra={
-                    "action": "recommend",
-                    "result": {"courses": [], "skip": dto.skip},
+                    "action": "map_filter",
+                    "input": filter_response.model_dump(mode="json"),
+                    "result": {
+                        "categories": filter_query.categories,
+                        "format": (
+                            filter_query.format.value if filter_query.format else None
+                        ),
+                        "max_duration_hours": filter_query.max_duration_hours,
+                        "certificate_required": filter_query.certificate_required,
+                        "limit": filter_query.limit,
+                        "skip": filter_query.skip,
+                    },
                 },
             )
-            return RecommendationsDTO(courses=[], skip=dto.skip)
+
+            # ---------- 4. DB filter ----------
+            self.logger.info(
+                "Filtering courses in database",
+                extra={
+                    "action": "db_filter",
+                    "input": {
+                        "categories": filter_query.categories,
+                        "format": (
+                            filter_query.format.value if filter_query.format else None
+                        ),
+                        "max_duration_hours": filter_query.max_duration_hours,
+                        "certificate_required": filter_query.certificate_required,
+                        "limit": filter_query.limit,
+                        "skip": filter_query.skip,
+                    },
+                },
+            )
+
+            courses = await self.course_repository.filter(filter_query)
+
+            self.logger.info(
+                "Courses filtered from database",
+                extra={
+                    "action": "db_filter",
+                    "result": {
+                        "count": len(courses),
+                        "course_ids": [str(c.course_id) for c in courses],
+                    },
+                },
+            )
+
+        # ---------- Fallback ----------
+        if not courses or not filter_response.is_decisive:
+            query = """
+            Предложи курсы, отсортированные по предполагаемой востребованности для широкой аудитории.
+
+            Критерии:
+            - универсальность
+            - актуальность
+            - прикладная ценность
+            - не нишевость
+            """
+
+            notices.extend(
+                [
+                    (
+                        RecommendationNotice.QUERY_INVALID
+                        if not filter_response.is_decisive
+                        else RecommendationNotice.QUERY_AMBIGUOUS
+                    ),
+                    RecommendationNotice.FALLBACK_USED,
+                ]
+            )
+
+            self.logger.info(
+                "Courses not found or indecisive",
+                extra={
+                    "action": "db_filter",
+                    "result": {"count": len(courses), "notices": notices},
+                },
+            )
+
+            courses = await self.course_repository.get_all(limit=self.MAX_LIMIT)
+
+            rng = random.Random()
+            rng.shuffle(courses)
+
+            self.logger.info(
+                "Courses retrieved and shuffled",
+                extra={
+                    "action": "db_filter",
+                    "result": {
+                        "count": len(courses),
+                        "notices": notices,
+                        "course_ids": [str(c.course_id) for c in courses],
+                    },
+                },
+            )
 
         # ---------- 5. LLM → Ranking ----------
         ranking_prompt = PromptTemplate(
@@ -236,7 +305,7 @@ class RecommendationService(IRecommendationService):
             extra={
                 "action": "llm_ranking",
                 "input": {
-                    "query": dto.query,
+                    "query": query,
                     "courses_count": len(courses),
                     "course_ids": [str(c.course_id) for c in courses],
                     "prompt_template": ranking_prompt.template,
@@ -245,7 +314,7 @@ class RecommendationService(IRecommendationService):
         )
 
         response = await ranking_llm.acomplete(
-            ranking_prompt.format(query=dto.query, courses=courses_json)
+            ranking_prompt.format(query=query, courses=courses_json)
         )
 
         ranking_response = CourseRankingLLM.model_validate_json(response.text)
@@ -271,8 +340,19 @@ class RecommendationService(IRecommendationService):
             if cid in course_by_id
         ]
 
+        if not ranked_courses:
+            self.logger.info(
+                "Ranking response is weak",
+                extra={"action": "llm_ranking"},
+            )
+
+            notices.append(RecommendationNotice.RANKING_WEAK)
+            ranked_courses = courses
+
         result = RecommendationsDTO(
-            courses=ranked_courses, skip=dto.skip + len(ranked_courses)
+            notices=notices,
+            courses=ranked_courses[: min(self.MAX_LIMIT, dto.limit)],
+            skip=dto.skip + len(ranked_courses),
         )
 
         self.logger.info(
@@ -283,6 +363,7 @@ class RecommendationService(IRecommendationService):
                     "courses_count": len(ranked_courses),
                     "course_ids": [str(c.course_id) for c in ranked_courses],
                     "skip": result.skip,
+                    "notices": notices,
                 },
             },
         )
