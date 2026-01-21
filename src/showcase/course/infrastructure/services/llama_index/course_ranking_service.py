@@ -140,11 +140,14 @@ class CourseRankingService(ICourseRankingService):
         if not courses:
             return True
 
+        if len(courses) <= cls.RANKING_WEAK_THRESHOLD:
+            return not any(c.confidence >= cls.MIN_CONFIDENCE for c in courses)
+
         return (
             reduce(
                 lambda count, x: count + (x >= cls.MIN_CONFIDENCE),
                 [c.confidence for c in courses],
                 0,
             )
-            < cls.RANKING_WEAK_THRESHOLD
+            <= cls.RANKING_WEAK_THRESHOLD
         )
