@@ -44,6 +44,15 @@ from showcase.course.infrastructure.database.postgres.sqlalchemy.repositories im
 from showcase.course.infrastructure.database.postgres.sqlalchemy.repositories.enrollment_repository import (
     EnrollmentRepository,
 )
+from showcase.course.infrastructure.services.course_ranking_service import (
+    CourseRankingService,
+)
+from showcase.course.infrastructure.services.course_retrieval_service import (
+    CourseRetrievalService,
+)
+from showcase.course.infrastructure.services.filter_inference_service import (
+    FilterInferenceService,
+)
 from showcase.course.infrastructure.services.recommendation_service import (
     RecommendationService,
 )
@@ -134,11 +143,29 @@ class RecommendationContainer(containers.DeclarativeContainer):
     course_read_repository: providers.Dependency[Any] = providers.Dependency()
     category_read_repository: providers.Dependency[Any] = providers.Dependency()
 
-    # Services
+    # Sub-services for recommendation pipeline
+    filter_inference_service = providers.Factory(
+        FilterInferenceService,
+        logger=logger,
+        llm=llm,
+    )
+    course_retrieval_service = providers.Factory(
+        CourseRetrievalService,
+        logger=logger,
+        course_repository=course_read_repository,
+    )
+    course_ranking_service = providers.Factory(
+        CourseRankingService,
+        logger=logger,
+        llm=llm,
+    )
+
+    # Orchestrator
     recommendation_service = providers.Factory(
         RecommendationService,
         logger=logger,
-        llm=llm,
-        course_repository=course_read_repository,
         category_repository=category_read_repository,
+        filter_inference=filter_inference_service,
+        course_retrieval=course_retrieval_service,
+        course_ranking=course_ranking_service,
     )
